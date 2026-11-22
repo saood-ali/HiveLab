@@ -101,9 +101,11 @@
 /* ── Main Layout Grid ────────────────────────────────────────────── */
 .sim-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* ── Step Inspector Panel ────────────────────────────────────────── */
@@ -113,6 +115,9 @@
   border-radius: var(--radius-md);
   padding: var(--space-5);
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 .sim-card__header {
@@ -371,15 +376,26 @@
 }
 
 /* ── Responsive adjustments ──────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 1040px) {
   .sim-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    width: 100%;
+  }
+
+  .sim-grid > div {
+    width: 100%;
+    min-width: 0;
   }
 }
 
 @media (max-width: 600px) {
   .simulator {
     padding: var(--space-4) var(--space-3) var(--space-12);
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .sim-controls {
@@ -394,5 +410,9 @@
   .sim-controls__actions .btn {
     flex: 1;
     justify-content: center;
+  }
+
+  .sim-card {
+    padding: var(--space-4) var(--space-3);
   }
 }

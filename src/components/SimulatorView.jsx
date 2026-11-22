@@ -1,16 +1,26 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import './SimulatorView.css';
-import { useAppState, useAppDispatch } from '../app/AppState.jsx';
+import { useAppState } from '../app/AppState.jsx';
 import { ABCEngine } from '../engine/abcEngine.js';
+import { ContourPlot } from './ContourPlot.jsx';
+import { FitnessProbabilityView } from './FitnessProbabilityView.jsx';
+import { ConvergenceChart } from './ConvergenceChart.jsx';
 
 export function SimulatorView() {
   const { problem, params } = useAppState();
-  const dispatch = useAppDispatch();
 
   // Create deterministic engine instance for current problem & parameters
   const engine = useMemo(() => {
     return new ABCEngine(problem, params);
   }, [problem, params]);
+
+  // Tab selection for right-hand column: 'table' | 'probabilities' | 'convergence'
+  const [activeTab, setActiveTab] = useState('table');
+
+  // Convergence history tracking: cycle 0 starts with initial best-so-far
+  const [convergenceHistory, setConvergenceHistory] = useState(() => [
+    { cycle: 0, bestF: engine.bestSoFar.f },
+  ]);
 
   // UI state synchronized with engine state
   const [engineState, setEngineState] = useState(() => ({
@@ -25,26 +35,44 @@ export function SimulatorView() {
     eventsLog: [engine.currentEvent],
   }));
 
-  const syncState = useCallback((latestEvent = null) => {
-    setEngineState((prev) => {
-      const log = latestEvent
-        ? [latestEvent, ...prev.eventsLog.slice(0, 19)]
-        : prev.eventsLog;
-      return {
-        stepIndex: engine.stepIndex,
-        cycle: engine.cycle,
-        phase: engine.phase,
-        isTerminated: engine.isTerminated,
-        population: engine.population.map((s) => ({ ...s, x: [...s.x] })),
-        bestSoFar: { ...engine.bestSoFar, x: [...engine.bestSoFar.x] },
-        currentEvent: { ...engine.currentEvent },
-        historyLength: engine.history.length,
-        eventsLog: log,
-      };
-    });
-  }, [engine]);
+  const syncState = useCallback(
+    (latestEvent = null) => {
+      setEngineState((prev) => {
+        const log = latestEvent
+          ? [latestEvent, ...prev.eventsLog.slice(0, 24)]
+          : prev.eventsLog;
+        return {
+          stepIndex: engine.stepIndex,
+          cycle: engine.cycle,
+          phase: engine.phase,
+          isTerminated: engine.isTerminated,
+          population: engine.population.map((s) => ({ ...s, x: [...s.x] })),
+          bestSoFar: { ...engine.bestSoFar, x: [...engine.bestSoFar.x] },
+          currentEvent: { ...engine.currentEvent },
+          historyLength: engine.history.length,
+          eventsLog: log,
+        };
+      });
 
-  // Advance exactly one step on user click
+      // Update convergence history on cycle completion
+      if (latestEvent?.type === 'CYCLE_SUMMARY') {
+        setConvergenceHistory((prev) => {
+          const exists = prev.some((d) => d.cycle === latestEvent.cycle);
+          if (exists) {
+            return prev.map((d) =>
+              d.cycle === latestEvent.cycle
+                ? { cycle: d.cycle, bestF: engine.bestSoFar.f }
+                : d
+            );
+          }
+          return [...prev, { cycle: latestEvent.cycle, bestF: engine.bestSoFar.f }];
+        });
+      }
+    },
+    [engine]
+  );
+
+  // Advance exactly one step on user click (Strictly manual: NO autoplay or timers)
   const handleNextStep = useCallback(() => {
     if (engine.isTerminated) return;
     const ev = engine.nextStep();
@@ -66,6 +94,11 @@ export function SimulatorView() {
         historyLength: engine.history.length,
         eventsLog: engineState.eventsLog.slice(1),
       });
+
+      // Trim convergence points if rewound past a cycle
+      setConvergenceHistory((prev) =>
+        prev.filter((d) => d.cycle <= engine.cycle)
+      );
     }
   }, [engine, engineState.eventsLog]);
 
@@ -83,9 +116,10 @@ export function SimulatorView() {
       historyLength: 0,
       eventsLog: [engine.currentEvent],
     });
+    setConvergenceHistory([{ cycle: 0, bestF: engine.bestSoFar.f }]);
   }, [engine]);
 
-  // Keyboard navigation: ArrowRight / Space for Next, ArrowLeft for Back, 'r' for Reset
+  // Keyboard navigation: ArrowRight / Space for Next, ArrowLeft for Back, 'R' for Reset
   useEffect(() => {
     function handleKeyDown(e) {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -116,7 +150,6 @@ export function SimulatorView() {
     eventsLog,
   } = engineState;
 
-  // Determine badge styling for current phase
   const phaseBadgeClass = {
     INIT: 'sim-controls__badge--init',
     EMPLOYED: 'sim-controls__badge--employed',
@@ -153,14 +186,14 @@ export function SimulatorView() {
             className="btn btn--secondary"
             onClick={handlePrevStep}
             disabled={historyLength === 0}
-            title={historyLength === 0 ? 'At initial step' : 'Rewind previous step'}
+            title={historyLength === 0 ? 'At initial step' : 'Rewind previous step (←)'}
           >
             ← Back
           </button>
           <button
             className="btn btn--secondary"
             onClick={handleReset}
-            title="Reset simulation to step 0 with the same seed"
+            title="Reset simulation to step 0 with the same seed (R)"
           >
             Reset
           </button>
@@ -168,7 +201,7 @@ export function SimulatorView() {
             className="btn btn--primary"
             onClick={handleNextStep}
             disabled={isTerminated}
-            title={isTerminated ? 'Algorithm finished' : 'Advance by 1 step (Next Step)'}
+            title={isTerminated ? 'Algorithm finished' : 'Advance by 1 step (Next Step / Space / →)'}
           >
             {isTerminated ? 'Finished' : 'Next Step →'}
           </button>
@@ -188,10 +221,23 @@ export function SimulatorView() {
         </div>
       </section>
 
-      {/* ── Main Two-Column Grid ────────────────────────────────────── */}
+      {/* ── Main Workspace Grid (Left: Visual Plot & Inspector | Right: Tables & Charts) ── */}
       <div className="sim-grid">
-        {/* Left Column: Step Inspector & Calculation */}
+        {/* Left Column: 2D Contour Plot + Step Inspector */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          {/* 2D Contour / Landscape Plot */}
+          <ContourPlot
+            problem={problem}
+            bounds={params.bounds ? {
+              lower: params.bounds.map((b) => Number(b[0])),
+              upper: params.bounds.map((b) => Number(b[1])),
+            } : problem.bounds}
+            population={population}
+            currentEvent={currentEvent}
+            bestSoFar={bestSoFar}
+          />
+
+          {/* Step Inspector / Decision Card */}
           <section className="sim-card" aria-labelledby="step-inspector-title">
             <div className="sim-card__header">
               <h2 className="sim-card__title" id="step-inspector-title">
@@ -238,7 +284,7 @@ export function SimulatorView() {
               </div>
             )}
 
-            {/* Calculation details / formula substitution (collapsible) */}
+            {/* Collapsible Formula & Math Substitution */}
             {(currentEvent.formula || currentEvent.details) && (
               <details className="sim-details" open>
                 <summary>Calculation &amp; Formula Substitution</summary>
@@ -296,87 +342,143 @@ export function SimulatorView() {
           </section>
         </div>
 
-        {/* Right Column: Live Population Table */}
-        <section className="sim-card" aria-labelledby="pop-table-title">
-          <div className="sim-card__header">
-            <h2 className="sim-card__title" id="pop-table-title">
-              Colony Food Sources (Np = {population.length})
-            </h2>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-              Limit = {params.limit}
-            </span>
-          </div>
+        {/* Right Column: Tabbed Views [Population Table | Fitness & Probabilities | Convergence Trend] */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          <section className="sim-card" aria-label="Colony Analytics and Data">
+            {/* View Tabs */}
+            <div
+              style={{
+                display: 'flex',
+                gap: 'var(--space-2)',
+                borderBottom: '1px solid var(--color-border)',
+                paddingBottom: 'var(--space-3)',
+                marginBottom: 'var(--space-4)',
+              }}
+              role="tablist"
+              aria-label="Analytics Tabs"
+            >
+              <button
+                role="tab"
+                aria-selected={activeTab === 'table'}
+                className={`btn btn--ghost${activeTab === 'table' ? ' btn--primary' : ''}`}
+                style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px' }}
+                onClick={() => setActiveTab('table')}
+              >
+                Food Sources (Np={population.length})
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeTab === 'probabilities'}
+                className={`btn btn--ghost${activeTab === 'probabilities' ? ' btn--primary' : ''}`}
+                style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px' }}
+                onClick={() => setActiveTab('probabilities')}
+              >
+                Fitness &amp; Probabilities
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeTab === 'convergence'}
+                className={`btn btn--ghost${activeTab === 'convergence' ? ' btn--primary' : ''}`}
+                style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px' }}
+                onClick={() => setActiveTab('convergence')}
+              >
+                Convergence Curve
+              </button>
+            </div>
 
-          <div className="sim-table-wrap">
-            <table className="sim-table" aria-label="Food Source Population Table">
-              <thead>
-                <tr>
-                  <th>Source</th>
-                  <th>Coordinates (x)</th>
-                  <th>Objective f</th>
-                  <th>Fitness</th>
-                  <th>Trial (t)</th>
-                  <th>pₘ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {population.map((src) => {
-                  const isActive =
-                    currentEvent.sourceId === src.id ||
-                    (currentEvent.affectedSourceId === src.id);
-                  const isBest = bestSoFar.id === src.id;
-                  const isScoutRisk = src.t > params.limit;
+            {/* Tab 1: Population Table */}
+            {activeTab === 'table' && (
+              <div>
+                <div className="sim-table-wrap">
+                  <table className="sim-table" aria-label="Food Source Population Table">
+                    <thead>
+                      <tr>
+                        <th>Source</th>
+                        <th>Coordinates (x)</th>
+                        <th>Objective f</th>
+                        <th>Fitness</th>
+                        <th>Trial (t)</th>
+                        <th>pₘ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {population.map((src) => {
+                        const isActive =
+                          currentEvent?.sourceId === src.id ||
+                          currentEvent?.affectedSourceId === src.id;
+                        const isBest = bestSoFar?.id === src.id;
+                        const isScoutRisk = src.t > params.limit;
 
-                  return (
-                    <tr
-                      key={src.id}
-                      className={[
-                        isActive ? 'sim-table tr--active' : '',
-                        isBest ? 'sim-table tr--best' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <td>
-                        <strong>#{src.id}</strong>
-                        {isBest && <span className="sim-badge-best">★ BEST</span>}
-                        {isScoutRisk && (
-                          <span className="sim-badge-scout-risk" title="trial > limit: scout candidate!">
-                            ⚠ LIMIT
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        [{src.x.map((coord) => coord.toFixed(3)).join(', ')}]
-                      </td>
-                      <td>{src.f.toFixed(4)}</td>
-                      <td>{src.fit.toFixed(4)}</td>
-                      <td>
-                        <strong>{src.t}</strong>
-                      </td>
-                      <td>
-                        {src.p !== undefined ? src.p.toFixed(3) : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        return (
+                          <tr
+                            key={src.id}
+                            className={[
+                              isActive ? 'sim-table tr--active' : '',
+                              isBest ? 'sim-table tr--best' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                          >
+                            <td>
+                              <strong>#{src.id}</strong>
+                              {isBest && <span className="sim-badge-best">★ BEST</span>}
+                              {isScoutRisk && (
+                                <span className="sim-badge-scout-risk" title="trial > limit: scout candidate!">
+                                  ⚠ LIMIT
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              [{src.x.map((coord) => coord.toFixed(3)).join(', ')}]
+                            </td>
+                            <td>{src.f.toFixed(4)}</td>
+                            <td>{src.fit.toFixed(4)}</td>
+                            <td>
+                              <strong>{src.t}</strong>
+                            </td>
+                            <td>
+                              {src.p !== undefined ? src.p.toFixed(3) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-          <div
-            style={{
-              marginTop: 'var(--space-4)',
-              fontSize: 'var(--font-size-xs)',
-              color: 'var(--color-text-muted)',
-              lineHeight: 'var(--line-height-normal)',
-            }}
-          >
-            * <strong>Trial (t):</strong> Consecutive failed improvement attempts. When trial &gt; limit ({params.limit}), the source is abandoned in the Scout Bee Phase.
-            <br />
-            * <strong>pₘ:</strong> Onlooker selection probability: <code>0.9 × (fit / max_fit) + 0.1</code>.
-          </div>
-        </section>
+                <div
+                  style={{
+                    marginTop: 'var(--space-4)',
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--color-text-muted)',
+                    lineHeight: 'var(--line-height-normal)',
+                  }}
+                >
+                  * <strong>Trial (t):</strong> Consecutive failed improvement attempts. When trial &gt; limit ({params.limit}), the source is abandoned in the Scout Bee Phase.
+                  <br />
+                  * <strong>pₘ:</strong> Onlooker selection probability: <code>0.9 × (fit / max_fit) + 0.1</code>.
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Fitness & Selection Probabilities View */}
+            {activeTab === 'probabilities' && (
+              <FitnessProbabilityView
+                population={population}
+                currentEvent={currentEvent}
+                bestSoFar={bestSoFar}
+              />
+            )}
+
+            {/* Tab 3: Convergence History Chart */}
+            {activeTab === 'convergence' && (
+              <ConvergenceChart
+                convergenceHistory={convergenceHistory}
+                maxCycles={params.T}
+              />
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );
