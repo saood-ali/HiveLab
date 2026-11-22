@@ -1,3 +1,4 @@
+# Contri
 # HiveLab
 
 An interactive web visualizer for the Artificial Bee Colony (ABC) optimization algorithm.
@@ -10,7 +11,10 @@ Everything runs locally in your browser with pure client-side code and no backgr
 ##  Demo Video 
 
 
-https://github.com/user-attachments/assets/5fdaaed6-0036-4108-b492-1d45f1645689
+
+https://github.com/user-attachments/assets/8d25d7fc-c476-4738-884d-9647662e53cc
+
+
 
 
 ## How It Works
