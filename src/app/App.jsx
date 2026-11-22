@@ -3,7 +3,7 @@ import { AppProvider, useAppState } from './AppState.jsx';
 import { Header } from '../components/Header.jsx';
 import { ProblemIntro } from '../components/ProblemIntro.jsx';
 import { ParameterSetup } from '../components/ParameterSetup.jsx';
-import { SimulatorPlaceholder } from '../components/SimulatorPlaceholder.jsx';
+import { SimulatorView } from '../components/SimulatorView.jsx';
 
 /** Breadcrumb-style phase progress indicator */
 function PhaseBar() {
@@ -51,7 +51,7 @@ function AppContent() {
       <main className="app__content">
         {view === 'intro' && <ProblemIntro />}
         {view === 'setup' && <ParameterSetup />}
-        {view === 'simulator' && <SimulatorPlaceholder />}
+        {view === 'simulator' && <SimulatorView />}
       </main>
     </div>
   );

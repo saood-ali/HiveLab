@@ -1,0 +1,398 @@
+/* ================================================================
+   Simulator View styles
+   Matches VirtualCourses exact tokens from design.md
+   ================================================================ */
+
+.simulator {
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Top Control Bar ─────────────────────────────────────────────── */
+.sim-controls {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.sim-controls__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sim-controls__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.sim-controls__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sim-controls__badge--init {
+  background: #f3f4f6;
+  color: var(--color-text-secondary);
+}
+
+.sim-controls__badge--employed {
+  background: rgba(255, 212, 0, 0.2);
+  color: #855b00;
+  border: 1px solid rgba(255, 212, 0, 0.6);
+}
+
+.sim-controls__badge--onlooker {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.sim-controls__badge--scout {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.sim-controls__badge--memorise {
+  background: rgba(22, 163, 74, 0.1);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+
+.sim-controls__badge--terminated {
+  background: #111111;
+  color: #ffffff;
+}
+
+.sim-controls__cycle-info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.sim-controls__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Main Layout Grid ────────────────────────────────────────────── */
+.sim-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ── Step Inspector Panel ────────────────────────────────────────── */
+.sim-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.sim-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sim-card__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sim-card__summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-normal);
+  margin-bottom: var(--space-4);
+}
+
+.sim-card__decision {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+}
+
+.sim-card__decision--accepted {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.sim-card__decision--rejected {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.sim-card__decision--skipped {
+  background: #f3f4f6;
+  color: var(--color-text-muted);
+}
+
+.sim-card__decision--scouted {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+/* Ledger of Random Draws */
+.sim-ledger {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sim-ledger__label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+}
+
+.sim-ledger__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sim-ledger__pill {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sim-ledger__pill strong {
+  color: var(--color-text-primary);
+}
+
+/* Disclosure / Calculation Detail */
+.sim-details {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.sim-details summary {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+.sim-details summary:hover {
+  color: var(--color-text-primary);
+}
+
+.sim-details__content {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--color-text-primary);
+  line-height: var(--line-height-relaxed);
+  overflow-x: auto;
+}
+
+/* ── Population Table ────────────────────────────────────────────── */
+.sim-table-wrap {
+  overflow-x: auto;
+}
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+.sim-table th {
+  padding: var(--space-3) var(--space-3);
+  background: var(--color-bg-secondary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sim-table td {
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sim-table tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.sim-table tr--active {
+  background: rgba(255, 212, 0, 0.12) !important;
+}
+
+.sim-table tr--best {
+  font-weight: var(--font-weight-bold);
+}
+
+.sim-badge-best {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+
+.sim-badge-scout-risk {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+
+/* ── Best-so-far Banner ──────────────────────────────────────────── */
+.sim-best-banner {
+  background: #111111;
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.sim-best-banner__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+  text-transform: uppercase;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+}
+
+.sim-best-banner__val {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 2px;
+}
+
+.sim-best-banner__coords {
+  font-size: var(--font-size-xs);
+  color: #9ca3af;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Trace History List ──────────────────────────────────────────── */
+.sim-history {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+}
+
+.sim-history__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.sim-history__item--current {
+  background: rgba(255, 212, 0, 0.15);
+  border: 1px solid rgba(255, 212, 0, 0.6);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+/* ── Responsive adjustments ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .sim-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .simulator {
+    padding: var(--space-4) var(--space-3) var(--space-12);
+  }
+
+  .sim-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sim-controls__actions {
+    justify-content: space-between;
+  }
+
+  .sim-controls__actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
