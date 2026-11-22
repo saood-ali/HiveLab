@@ -933,22 +933,11 @@ export function SimulatorView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           <section className="sim-card" aria-label="Colony Analytics and Data">
             {/* View Tabs */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 'var(--space-2)',
-                borderBottom: '1px solid var(--color-border)',
-                paddingBottom: 'var(--space-3)',
-                marginBottom: 'var(--space-4)',
-              }}
-              role="tablist"
-              aria-label="Analytics Tabs"
-            >
+            <div className="sim-analytics-tabs" role="tablist" aria-label="Analytics Tabs">
               <button
                 role="tab"
                 aria-selected={activeTab === 'table'}
-                className={`btn btn--ghost${activeTab === 'table' ? ' btn--primary' : ''}`}
-                style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px' }}
+                className={`sim-analytics-tab${activeTab === 'table' ? ' sim-analytics-tab--active' : ''}`}
                 onClick={() => setActiveTab('table')}
               >
                 Food Sources (Np={population.length})
@@ -956,8 +945,7 @@ export function SimulatorView() {
               <button
                 role="tab"
                 aria-selected={activeTab === 'probabilities'}
-                className={`btn btn--ghost${activeTab === 'probabilities' ? ' btn--primary' : ''}`}
-                style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px' }}
+                className={`sim-analytics-tab${activeTab === 'probabilities' ? ' sim-analytics-tab--active' : ''}`}
                 onClick={() => setActiveTab('probabilities')}
               >
                 Fitness &amp; Probabilities
@@ -965,8 +953,7 @@ export function SimulatorView() {
               <button
                 role="tab"
                 aria-selected={activeTab === 'convergence'}
-                className={`btn btn--ghost${activeTab === 'convergence' ? ' btn--primary' : ''}`}
-                style={{ fontSize: 'var(--font-size-xs)', padding: '6px 12px' }}
+                className={`sim-analytics-tab${activeTab === 'convergence' ? ' sim-analytics-tab--active' : ''}`}
                 onClick={() => setActiveTab('convergence')}
               >
                 Convergence Curve

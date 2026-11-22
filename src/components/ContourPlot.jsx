@@ -468,45 +468,41 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
       {/* Visual Legend */}
       <div className="plot-legend" aria-label="Plot Legend">
         <span className="plot-legend__item">
-          <span
-            style={{
-              display: 'inline-block',
-              width: '8px',
-              height: '8px',
-              borderRadius: '9999px',
-              backgroundColor: '#111111',
-            }}
-          />
-          Food Source
+          <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }} aria-hidden="true">
+            <circle cx="6" cy="6" r="4.5" fill="#0f172a" />
+          </svg>
+          <span>Food Source</span>
         </span>
         <span className="plot-legend__item">
-          <span
-            style={{
-              display: 'inline-block',
-              width: '9px',
-              height: '9px',
-              borderRadius: '9999px',
-              backgroundColor: 'var(--color-accent)',
-              border: '1.5px solid #111111',
-            }}
-          />
-          Active Bee
+          <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }} aria-hidden="true">
+            <circle cx="6" cy="6" r="4.5" fill="#f59e0b" stroke="#0f172a" strokeWidth="1.5" />
+          </svg>
+          <span>Active Bee</span>
         </span>
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: '#b45309', fontWeight: 'bold' }}>x*</span>
-          Best-so-far
+          <span style={{ color: '#b45309', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', flexShrink: 0 }}>x*</span>
+          <span>Best-so-far</span>
         </span>
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: '#15803d' }}>──→</span>
-          Accepted Move
+          <svg width="24" height="10" viewBox="0 0 24 10" style={{ flexShrink: 0 }} aria-hidden="true">
+            <line x1="1" y1="5" x2="18" y2="5" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" />
+            <polygon points="17,2 23,5 17,8" fill="#16a34a" />
+          </svg>
+          <span>Accepted Move</span>
         </span>
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: '#b91c1c' }}>- -→</span>
-          Rejected Move
+          <svg width="24" height="10" viewBox="0 0 24 10" style={{ flexShrink: 0 }} aria-hidden="true">
+            <line x1="1" y1="5" x2="18" y2="5" stroke="#dc2626" strokeWidth="2" strokeDasharray="3 2" strokeLinecap="round" />
+            <polygon points="17,2 23,5 17,8" fill="#dc2626" />
+          </svg>
+          <span>Rejected Move</span>
         </span>
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: '#2563eb' }}>⇢</span>
-          Scout Replacement
+          <svg width="24" height="10" viewBox="0 0 24 10" style={{ flexShrink: 0 }} aria-hidden="true">
+            <line x1="1" y1="5" x2="18" y2="5" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="2 2" strokeLinecap="round" />
+            <polygon points="17,2 23,5 17,8" fill="#2563eb" />
+          </svg>
+          <span>Scout Replacement</span>
         </span>
       </div>
     </div>
