@@ -204,6 +204,23 @@ assert(
   'Same seed produces 100% identical trace after reset'
 );
 
+console.log('\n=== Test Suite 10: Fast Forward to Completion ===');
+const ffProblem = getProblemById('sphere-lecture');
+const ffEngine = new ABCEngine(ffProblem, { S: 10, T: 5, limit: 1, seed: 99, bounds: [[-5, 5], [-5, 5]] });
+assert(ffEngine.isTerminated === false, 'Engine initially not terminated');
+const finalEv = ffEngine.fastForward();
+assert(ffEngine.isTerminated === true, 'fastForward() reaches termination');
+assert(ffEngine.phase === 'TERMINATED', 'Phase is TERMINATED after fastForward()');
+assert(finalEv.type === 'ALGORITHM_TERMINATED', 'Final event type is ALGORITHM_TERMINATED');
+assert(ffEngine.cycle === 5, 'Reached final cycle T=5');
+assert(typeof ffEngine.bestSoFar.f === 'number', 'Final best objective is valid number');
+
+// Verify prevStep rewinds from terminated state
+const canRewindFromTerminated = ffEngine.prevStep();
+assert(canRewindFromTerminated === true, 'prevStep() can rewind from terminated state');
+assert(ffEngine.isTerminated === false, 'Engine is no longer terminated after prevStep()');
+assert(ffEngine.phase === 'MEMORISE', 'Rewound to MEMORISE phase of final cycle');
+
 console.log(`\n========================================`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
 console.log(`========================================`);

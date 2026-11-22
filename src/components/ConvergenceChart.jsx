@@ -71,7 +71,7 @@ export function ConvergenceChart({ convergenceHistory, maxCycles }) {
           {data.length > 1 && (
             <polygon
               points={`${toX(data[0].cycle)},${H - PAD_Y} ${pointsStr} ${toX(latest.cycle)},${H - PAD_Y}`}
-              fill="rgba(255, 212, 0, 0.15)"
+              fill="rgba(15, 23, 42, 0.05)"
             />
           )}
 

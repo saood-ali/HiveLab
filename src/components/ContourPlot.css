@@ -128,8 +128,8 @@
 }
 
 .plot-anim-btn--active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-accent-text);
-  font-weight: var(--font-weight-bold);
+  background: var(--color-primary-action);
+  border-color: var(--color-primary-action);
+  color: var(--color-primary-action-text);
+  font-weight: var(--font-weight-semibold);
 }

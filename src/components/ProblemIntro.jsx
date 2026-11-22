@@ -2,11 +2,6 @@ import './ProblemIntro.css';
 import { PROBLEMS } from '../data/problems.js';
 import { useAppState, useAppDispatch } from '../app/AppState.jsx';
 
-function TagBadge({ tag }) {
-  const cls = tag === 'Benchmark' ? 'intro__tag--benchmark' : 'intro__tag--practice';
-  return <span className={`intro__tag ${cls}`}>{tag}</span>;
-}
-
 export function ProblemIntro() {
   const { problem, problemId } = useAppState();
   const dispatch = useAppDispatch();
@@ -21,38 +16,37 @@ export function ProblemIntro() {
 
   return (
     <main className="intro" aria-labelledby="intro-title">
-      {/* Problem selector */}
-      <label className="intro__selector-label" id="problem-selector-label">
-        Select problem
-      </label>
-      <div
-        className="intro__selector-row"
-        role="listbox"
-        aria-labelledby="problem-selector-label"
-        aria-orientation="horizontal"
-      >
-        {PROBLEMS.map((p) => (
-          <button
-            key={p.id}
-            role="option"
-            aria-selected={p.id === problemId}
-            className={`intro__selector-btn${p.id === problemId ? ' intro__selector-btn--active' : ''}`}
-            onClick={() => handleSelectProblem(p.id)}
-          >
-            <TagBadge tag={p.tag} />
-            {p.name}
-          </button>
-        ))}
+      {/* Problem selector - clean unified segmented bar without nested boxes */}
+      <div className="intro__selector-container">
+        <label className="intro__selector-label" id="problem-selector-label">
+          Select Problem
+        </label>
+        <div
+          className="intro__selector-group"
+          role="radiogroup"
+          aria-labelledby="problem-selector-label"
+        >
+          {PROBLEMS.map((p) => (
+            <button
+              key={p.id}
+              role="radio"
+              aria-checked={p.id === problemId}
+              className={`intro__selector-tab${p.id === problemId ? ' intro__selector-tab--active' : ''}`}
+              onClick={() => handleSelectProblem(p.id)}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Problem detail card */}
       <div className="intro__card">
         <div className="intro__eyebrow">
-          <TagBadge tag={problem.tag} />
           <span className="intro__eyebrow-text">
             {problem.tag === 'Benchmark'
-              ? 'Standard benchmark optimization problem'
-              : 'Interactive practice problem'}
+              ? 'Standard Benchmark Problem'
+              : 'Interactive Practice Problem'}
           </span>
         </div>
 

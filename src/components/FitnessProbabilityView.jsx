@@ -34,8 +34,8 @@ export function FitnessProbabilityView({ population, currentEvent, bestSoFar }) 
             >
               <div className="fp-source-label">
                 #{src.id}
-                {isBest && <span style={{ color: '#855b00' }}>★</span>}
-                {isActive && <span style={{ color: 'var(--color-accent)' }}>●</span>}
+                {isBest && <span style={{ color: '#b45309', fontWeight: 'bold' }}>x*</span>}
+                {isActive && <span style={{ color: '#0f172a' }}>●</span>}
               </div>
 
               {/* Fitness Bar */}
@@ -71,7 +71,7 @@ export function FitnessProbabilityView({ population, currentEvent, bestSoFar }) 
       </div>
 
       <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: 'var(--line-height-normal)' }}>
-        💡 <strong>Key Takeaway:</strong> The fittest source receives pₘ = 1.0, while the +0.1 probability floor guarantees that even poor sources retain a chance of exploration by onlookers.
+        <strong>Key Principle:</strong> The fittest source receives pₘ = 1.0, while the +0.1 probability floor guarantees that even poor sources retain a chance of exploration by onlookers.
       </div>
     </div>
   );

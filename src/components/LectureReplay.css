@@ -33,16 +33,16 @@
 }
 
 .badge--walkthrough {
-  background-color: var(--color-accent);
-  color: #000000;
-  font-weight: 700;
+  background-color: var(--color-primary-action);
+  color: var(--color-primary-action-text);
+  font-weight: 600;
 }
 
 .badge--phase-indicator {
-  background-color: var(--color-surface-subtle);
+  background-color: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .replay-title {
@@ -108,14 +108,14 @@
 }
 
 .stage-tab--active {
-  background-color: var(--color-surface-subtle);
-  border-color: var(--color-border);
-  color: var(--color-text-primary);
+  background-color: var(--color-primary-action);
+  border-color: var(--color-primary-action);
+  color: var(--color-primary-action-text);
   font-weight: 600;
 }
 
 .stage-tab__step {
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   font-size: 10px;
   background-color: rgba(0, 0, 0, 0.06);
@@ -124,8 +124,8 @@
 }
 
 .stage-tab--active .stage-tab__step {
-  background-color: var(--color-accent);
-  color: #000000;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .stage-nav-btns {
@@ -296,13 +296,13 @@
 
 .badge-best {
   display: inline-block;
-  background-color: #DCFCE7;
-  color: #15803D;
-  border: 1px solid #86EFAC;
+  background-color: var(--color-success-bg);
+  color: #15803d;
+  border: 1px solid var(--color-success-border);
   padding: 1px 6px;
   border-radius: var(--radius-sm);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   margin-right: var(--space-1);
 }
 

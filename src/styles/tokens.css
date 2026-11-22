@@ -6,48 +6,47 @@
    ================================================================= */
 
 :root {
-  /* ── Brand ───────────────────────────────────────────────────── */
-  /* Confirmed from live site: primary CTA bg, active nav indicator, stars */
-  --color-accent: #FFD400;
-  /* Measured hover state on CTA buttons */
-  --color-accent-hover: #e6be00;
-  /* Text on yellow bg — measured as #111111 on the site */
-  --color-accent-text: #111111;
+  /* ── Brand & Subtle Accent ──────────────────────────────────── */
+  /* Warm amber used sparingly for bee identity and map highlights (never full loud backgrounds) */
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-accent-text: #ffffff;
+  --color-accent-subtle: #fef3c7;
+  --color-accent-border: #fde68a;
+
+  /* ── Primary Action (Clean, professional deep charcoal) ──────── */
+  --color-primary-action: #0f172a;
+  --color-primary-action-hover: #1e293b;
+  --color-primary-action-text: #ffffff;
 
   /* ── Page / background ───────────────────────────────────────── */
-  /* Measured: body bg = #FFFFFF */
   --color-bg: #ffffff;
-  /* Measured: section feature strip = #FAFAFA; card pills = #F9FAFB */
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #fafafa;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
 
   /* ── Surfaces / cards ────────────────────────────────────────── */
-  /* Measured: course cards = #FFFFFF; category cards = #F9FAFB */
   --color-surface: #ffffff;
-  --color-surface-raised: #f9fafb;
+  --color-surface-raised: #ffffff;
 
   /* ── Text ────────────────────────────────────────────────────── */
-  /* Measured: headings, nav, card titles = #111111 */
-  --color-text-primary: #111111;
-  /* Measured: hero description, subheadings = #4B5563 (gray-600) */
-  --color-text-secondary: #4b5563;
-  /* Measured: metadata, student counts, footer = #6B7280 (gray-500) */
-  --color-text-muted: #6b7280;
-  /* Measured: placeholder / disabled = #9CA3AF (gray-400) */
-  --color-text-disabled: #9ca3af;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-text-disabled: #94a3b8;
 
   /* ── Borders / dividers ──────────────────────────────────────── */
-  /* Measured: header bottom, card outlines, section dividers = #E5E7EB (gray-200) */
-  --color-border: #e5e7eb;
-  /* Measured: hover border on cards = rgba(255,212,0,0.5) → use solid for accessibility */
-  --color-border-strong: #d1d5db;
-  /* Measured: hover card border tint */
-  --color-border-accent: rgba(255, 212, 0, 0.5);
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-border-accent: #fde68a;
 
-  /* ── Status colours (shape/pattern used alongside colour) ────── */
+  /* ── Status colours (restrained semantic tones) ──────────────── */
   --color-success: #16a34a;         /* accepted move */
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
   --color-danger: #dc2626;          /* rejected move */
-  --color-info: #2563eb;            /* scout / info */
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-info: #0f172a;            /* scout / info */
   --color-warning: #d97706;         /* caution notices */
 
   /* ── Typography ──────────────────────────────────────────────── */

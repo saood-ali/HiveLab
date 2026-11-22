@@ -14,7 +14,6 @@ function PhaseBar() {
     { id: 'intro', label: 'Problem' },
     { id: 'setup', label: 'Parameters' },
     { id: 'simulator', label: 'Simulator' },
-    { id: 'replay', label: 'Worked Example' },
   ];
   const activeIdx = steps.findIndex((s) => s.id === view);
 
@@ -57,8 +56,7 @@ function AppContent() {
       <main className="app__content">
         {view === 'intro' && <ProblemIntro />}
         {view === 'setup' && <ParameterSetup />}
-        {view === 'simulator' && <SimulatorView />}
-        {view === 'replay' && <LectureReplay />}
+        {(view === 'simulator' || view === 'replay') && <SimulatorView />}
       </main>
     </div>
   );

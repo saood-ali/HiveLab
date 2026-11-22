@@ -285,6 +285,22 @@ export class ABCEngine {
   }
 
   /**
+   * Fast-forward simulation to completion (termination event).
+   * Advances step-by-step recording history so the run can still be rewound with prevStep().
+   *
+   * @param {number} maxSteps - Safety guard against infinite loops (default 100000)
+   * @returns {Object} The final event description
+   */
+  fastForward(maxSteps = 100000) {
+    let steps = 0;
+    while (!this.isTerminated && steps < maxSteps) {
+      this.nextStep();
+      steps++;
+    }
+    return this.currentEvent;
+  }
+
+  /**
    * Reset simulation back to step 0 with the same seed.
    */
   reset() {
@@ -333,6 +349,8 @@ export class ABCEngine {
     const oldTrial = source.t;
     const oldF = source.f;
     const oldFit = source.fit;
+    const oldX = [...source.x];
+    const partnerPos = [...partner.x];
 
     if (accepted) {
       source.x = candidate;
@@ -344,7 +362,7 @@ export class ABCEngine {
     }
 
     const varName = this.problem.varNames[dimIdx];
-    const formulaStr = `x'_${m + 1},${dimIdx + 1} = ${source.x[dimIdx].toFixed(4)} + (${phi.toFixed(4)}) × (${source.x[dimIdx].toFixed(4)} - ${partner.x[dimIdx].toFixed(4)})`;
+    const formulaStr = `x'_${m + 1},${dimIdx + 1} = ${oldX[dimIdx].toFixed(4)} + (${phi.toFixed(4)}) × (${oldX[dimIdx].toFixed(4)} - ${partnerPos[dimIdx].toFixed(4)})`;
 
     return {
       stepIndex: this.stepIndex,
@@ -354,10 +372,11 @@ export class ABCEngine {
       title: `Employed Bee #${m + 1}`,
       sourceId: source.id,
       partnerId: partner.id,
+      partnerPos,
       dim: dimIdx,
       dimName: varName,
       phi,
-      oldX: [...source.x],
+      oldX,
       candidateX: candidate,
       rawValue,
       clippedValue,
@@ -443,6 +462,8 @@ export class ABCEngine {
     const oldTrial = source.t;
     const oldF = source.f;
     const oldFit = source.fit;
+    const oldX = [...source.x];
+    const partnerPos = [...partner.x];
 
     if (accepted) {
       source.x = candidate;
@@ -462,12 +483,14 @@ export class ABCEngine {
       title: `Onlooker Bee #${j + 1} (Source #${source.id})`,
       sourceId: source.id,
       partnerId: partner.id,
+      partnerPos,
       dim: dimIdx,
       dimName: varName,
       r,
       pm,
       phi,
       passedGate: true,
+      oldX,
       candidateX: candidate,
       rawValue,
       clippedValue,

@@ -1,78 +1,47 @@
 import { useState, useEffect, useMemo } from 'react';
 import './LectureReplay.css';
-import { WORKED_STAGES } from '../data/lectureSnapshots.js';
-import { PROBLEMS } from '../data/problems.js';
+import { useAppState } from '../app/AppState.jsx';
+import { generateDynamicWorkedExample } from '../engine/workedExampleGenerator.js';
 import { ContourPlot } from './ContourPlot.jsx';
 
 export function WorkedExample() {
+  const { problem, params } = useAppState();
   const [currentStageIdx, setCurrentStageIdx] = useState(0);
 
-  const stage = WORKED_STAGES[currentStageIdx];
-  const sphereProblem = PROBLEMS[0]; // Reference sphere benchmark problem
+  // Dynamically generate the 4 worked example stages using active problem & parameters
+  const stages = useMemo(() => {
+    return generateDynamicWorkedExample(problem, params);
+  }, [problem, params]);
 
-  // Bounds for the benchmark problem: [-5, 5]²
-  const bounds = useMemo(
-    () => ({
-      lower: [-5, -5],
-      upper: [5, 5],
-    }),
-    []
-  );
+  // Ensure current stage index is within bounds
+  const stage = stages[currentStageIdx] || stages[0];
+
+  // Active bounds
+  const bounds = useMemo(() => {
+    if (params.bounds && params.bounds.length >= 2) {
+      return {
+        lower: params.bounds.map((b) => Number(b[0])),
+        upper: params.bounds.map((b) => Number(b[1])),
+      };
+    }
+    return problem.bounds;
+  }, [problem, params]);
 
   // Keyboard navigation: Left/Right arrows change stage
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
       if (e.key === 'ArrowRight') {
-        setCurrentStageIdx((idx) => Math.min(WORKED_STAGES.length - 1, idx + 1));
+        setCurrentStageIdx((idx) => Math.min(stages.length - 1, idx + 1));
       } else if (e.key === 'ArrowLeft') {
         setCurrentStageIdx((idx) => Math.max(0, idx - 1));
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [stages.length]);
 
-  // Construct synthetic event for ContourPlot to show movements
-  const contourEvent = useMemo(() => {
-    if (stage.stageIndex === 1) {
-      return {
-        phase: 'EMPLOYED',
-        sourceId: 1,
-        oldX: [2, -1],
-        candidateX: [5, -1],
-        accepted: false,
-        dim: 0,
-      };
-    }
-    if (stage.stageIndex === 2) {
-      return {
-        phase: 'ONLOOKER',
-        sourceId: 1,
-        oldX: [2, -1],
-        candidateX: [1.32, -1],
-        accepted: true,
-        dim: 0,
-      };
-    }
-    if (stage.stageIndex === 3) {
-      return {
-        type: 'SCOUT_REPLACED',
-        phase: 'SCOUT',
-        abandonedSources: [
-          {
-            sourceId: 5,
-            oldX: [3, 0],
-            newX: [-0.7, -0.8],
-          },
-        ],
-      };
-    }
-    return null;
-  }, [stage]);
-
-  // Format number cleanly
-  const fmt = (n) => (typeof n === 'number' ? (Number.isInteger(n) ? `${n}` : n.toFixed(3)) : n);
+  const calc = stage.calculation;
 
   return (
     <div className="replay-container" role="region" aria-label="ABC Algorithm Step-by-Step Worked Example">
@@ -80,8 +49,11 @@ export function WorkedExample() {
       <div className="replay-header">
         <div className="replay-header__left">
           <div className="replay-badge-row">
-            <span className="badge badge--walkthrough">Step-by-Step Walkthrough</span>
+            <span className="badge badge--walkthrough">Dynamic Worked Example</span>
             <span className="badge badge--phase-indicator">Stage {stage.stageIndex} of 3</span>
+            <span className="badge" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '11px' }}>
+              Problem: {problem.name} &nbsp;·&nbsp; Np = {stage.population.length} &nbsp;·&nbsp; limit = {params.limit} &nbsp;·&nbsp; seed = {params.seed}
+            </span>
           </div>
           <h2 className="replay-title">{stage.title}</h2>
           <p className="replay-subtitle">{stage.summary}</p>
@@ -91,7 +63,7 @@ export function WorkedExample() {
       {/* Stage Stepper Tabs & Controls */}
       <div className="stage-controls-bar">
         <div className="stage-tabs" role="tablist" aria-label="Algorithm stages">
-          {WORKED_STAGES.map((s, idx) => (
+          {stages.map((s, idx) => (
             <button
               key={s.stageIndex}
               role="tab"
@@ -120,12 +92,12 @@ export function WorkedExample() {
             ← Previous Stage
           </button>
           <span className="stage-step-counter">
-            {currentStageIdx + 1} / {WORKED_STAGES.length}
+            {currentStageIdx + 1} / {stages.length}
           </span>
           <button
             className="btn btn--primary btn--sm"
-            onClick={() => setCurrentStageIdx((i) => Math.min(WORKED_STAGES.length - 1, i + 1))}
-            disabled={currentStageIdx === WORKED_STAGES.length - 1}
+            onClick={() => setCurrentStageIdx((i) => Math.min(stages.length - 1, i + 1))}
+            disabled={currentStageIdx === stages.length - 1}
             aria-label="Next algorithm stage"
           >
             Next Stage →
@@ -146,7 +118,7 @@ export function WorkedExample() {
           <div className="replay-card">
             <div className="replay-card__header">
               <h3 className="replay-card__title">
-                <span>📋</span> Colony State Snapshot
+                Colony State Snapshot
               </h3>
               <span className="table-badge">Cycle 1 State</span>
             </div>
@@ -156,49 +128,38 @@ export function WorkedExample() {
                 <thead>
                   <tr>
                     <th>Source</th>
-                    <th>x₁</th>
-                    <th>x₂</th>
+                    {problem.varNames.map((name, i) => (
+                      <th key={i}>{name}</th>
+                    ))}
                     <th>f(x)</th>
                     <th>fit</th>
                     <th>Trial (t)</th>
                     <th>pₘ</th>
-                    <th>Status / Notes</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stage.population.map((src) => {
-                    const isActive =
-                      (stage.stageIndex === 1 && src.id === 1) ||
-                      (stage.stageIndex === 2 && src.id === 1) ||
-                      (stage.stageIndex === 3 && src.id === 5);
-                    const isBest = src.id === stage.bestSoFar.id;
-
+                    const isBest = stage.bestSoFar && stage.bestSoFar.id === src.id;
                     return (
                       <tr
                         key={src.id}
-                        className={[
-                          isActive ? 'row--active' : '',
-                          isBest ? 'row--best' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
+                        className={isBest ? 'row-best' : ''}
                       >
-                        <td className="cell-id">
-                          <span className="source-dot" />#{src.id}
-                        </td>
-                        <td>{fmt(src.x[0])}</td>
-                        <td>{fmt(src.x[1])}</td>
-                        <td className="cell-f">{fmt(src.f)}</td>
-                        <td className="cell-fit">{fmt(src.fit)}</td>
-                        <td>
-                          <span className={`trial-badge${src.t > 1 ? ' trial-badge--scout' : ''}`}>
+                        <td className="cell-source">#{src.id}</td>
+                        {src.x.map((coord, i) => (
+                          <td key={i} className="cell-num">{coord.toFixed(3)}</td>
+                        ))}
+                        <td className="cell-num">{src.f.toFixed(4)}</td>
+                        <td className="cell-num">{src.fit.toFixed(4)}</td>
+                        <td className="cell-num">
+                          <span className={src.t > params.limit ? 'trial-exceeded' : ''}>
                             {src.t}
                           </span>
                         </td>
                         <td className="cell-p">{(src.p * 100).toFixed(1)}%</td>
                         <td className="cell-note">
-                          {isBest && <span className="badge-best">★ Best</span>}
-                          {src.note && <span className="note-text">{src.note}</span>}
+                          {isBest && <span className="badge-best">Best</span>}
                         </td>
                       </tr>
                     );
@@ -207,23 +168,71 @@ export function WorkedExample() {
               </table>
             </div>
             <div className="table-caption">
-              <em>Parameters:</em> Colony size S = 10 (Np = 5 sources), abandonment limit = 1, bounds [-5, 5]².
+              <em>Parameters:</em> Colony S = {params.S} (Np = {stage.population.length} sources), limit = {params.limit}, bounds = [{bounds.lower.join(', ')}] to [{bounds.upper.join(', ')}].
             </div>
           </div>
 
-          {/* Worked Hand-Calculation Card (Stages 1, 2, 3) */}
-          {stage.calculation && (
+          {/* Worked Hand-Calculation Card */}
+          {calc && (
             <div className="replay-card calc-card">
               <div className="replay-card__header">
                 <h3 className="replay-card__title">
-                  <span>🔬</span> Step-by-Step Calculation Breakdown
+                  Step-by-Step Calculation Breakdown
                 </h3>
                 <span className="badge badge--calculation">
-                  {stage.stageIndex === 1 && 'Employed Bee #1'}
-                  {stage.stageIndex === 2 && 'Onlooker Bee on #1'}
-                  {stage.stageIndex === 3 && 'Scout Replacement on #5'}
+                  {stage.stageIndex === 0 && 'Initial Population Setup'}
+                  {stage.stageIndex === 1 && `Employed Bee #${calc.sourceId}`}
+                  {stage.stageIndex === 2 && `Onlooker Bee on #${calc.sourceId}`}
+                  {stage.stageIndex === 3 && `Scout Bee Audit & Replacement`}
                 </span>
               </div>
+
+              {/* Stage 0 Breakdown */}
+              {stage.stageIndex === 0 && (
+                <div className="calc-body">
+                  <div className="calc-param-grid">
+                    <div className="calc-param">
+                      <span className="calc-param__k">Problem:</span>
+                      <span className="calc-param__v">{problem.name}</span>
+                    </div>
+                    <div className="calc-param">
+                      <span className="calc-param__k">Objective Equation:</span>
+                      <span className="calc-param__v">{problem.objective}</span>
+                    </div>
+                    <div className="calc-param">
+                      <span className="calc-param__k">Initial Best Source:</span>
+                      <span className="calc-param__v">
+                        #{calc.bestSource.id} (f = {calc.bestSource.f.toFixed(4)})
+                      </span>
+                    </div>
+                    <div className="calc-param">
+                      <span className="calc-param__k">Total Sources Np:</span>
+                      <span className="calc-param__v">{stage.population.length}</span>
+                    </div>
+                  </div>
+
+                  <div className="calc-step-box">
+                    <span className="calc-step-label">1. Fitness Transformation Formula:</span>
+                    <p>
+                      For minimization problems, the objective value <code>f(x)</code> is converted to a positive fitness <code>fit(x)</code> to maximize:
+                    </p>
+                    <code>
+                      fit = 1 / (1 + f(x)) &nbsp; [if f(x) ≥ 0] &nbsp;|&nbsp; fit = 1 + |f(x)| &nbsp; [if f(x) &lt; 0]
+                    </code>
+                  </div>
+
+                  <div className="calc-step-box">
+                    <span className="calc-step-label">2. Verification on Source #{calc.sampleSource.id}:</span>
+                    <p>
+                      Coordinates: <code>[{calc.sampleSource.x.map((c) => c.toFixed(3)).join(', ')}]</code>
+                      <br />
+                      Objective evaluation: <code>f(X¹) = {calc.sampleSource.f.toFixed(4)}</code>
+                      <br />
+                      Fitness evaluation: <code>fit(X¹) = 1 / (1 + {calc.sampleSource.f.toFixed(4)}) = {calc.sampleSource.fit.toFixed(4)}</code>
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Stage 1 Breakdown */}
               {stage.stageIndex === 1 && (
@@ -232,57 +241,82 @@ export function WorkedExample() {
                     <div className="calc-param">
                       <span className="calc-param__k">Current Source:</span>
                       <span className="calc-param__v">
-                        X¹ = ({stage.calculation.sourcePos.join(', ')})
+                        X^{calc.sourceId} = ({calc.sourcePos.map((c) => c.toFixed(3)).join(', ')})
                       </span>
                     </div>
                     <div className="calc-param">
                       <span className="calc-param__k">Partner Source:</span>
                       <span className="calc-param__v">
-                        X⁴ = ({stage.calculation.partnerPos.join(', ')})
+                        X^{calc.partnerId} = ({calc.partnerPos.map((c) => c.toFixed(3)).join(', ')})
                       </span>
                     </div>
                     <div className="calc-param">
                       <span className="calc-param__k">Perturbed Dimension:</span>
-                      <span className="calc-param__v">x₁ (index 0)</span>
+                      <span className="calc-param__v">{calc.varName} (dim {calc.dimIdx})</span>
                     </div>
                     <div className="calc-param">
                       <span className="calc-param__k">Random Weight φ:</span>
-                      <span className="calc-param__v">{stage.calculation.phi}</span>
+                      <span className="calc-param__v">{calc.phi.toFixed(4)}</span>
                     </div>
                   </div>
 
                   <div className="calc-step-box">
                     <span className="calc-step-label">1. Perturbation Formula:</span>
                     <code>
-                      x'₁₁ = x₁₁ + φ₁₁(x₁₁ - x₄₁) = 2 + 0.81 × (2 - (-5)) = 7.67
+                      v_{calc.sourceId},{calc.dimIdx + 1} = x_{calc.sourceId},{calc.dimIdx + 1} + φ × (x_{calc.sourceId},{calc.dimIdx + 1} - x_{calc.partnerId},{calc.dimIdx + 1})
+                      <br />
+                      = {calc.sourcePos[calc.dimIdx].toFixed(3)} + ({calc.phi.toFixed(3)}) × ({calc.sourcePos[calc.dimIdx].toFixed(3)} - {calc.partnerPos[calc.dimIdx].toFixed(3)})
+                      <br />
+                      = {calc.rawValue.toFixed(4)}
                     </code>
                   </div>
 
-                  <div className="calc-step-box calc-step-box--warning">
-                    <span className="calc-step-label">2. Boundary Constraint &amp; Clipping:</span>
+                  <div className={`calc-step-box${calc.clipped ? ' calc-step-box--warning' : ''}`}>
+                    <span className="calc-step-label">2. Boundary Constraint &amp; Coordinates:</span>
                     <p>
-                      Candidate coordinate <code>7.67</code> exceeds upper bound <code>u₁ = 5.0</code>.
+                      {calc.clipped ? (
+                        <>
+                          Raw coordinate <code>{calc.rawValue.toFixed(4)}</code> exceeded bounds. Clipped to <code>{calc.clippedValue.toFixed(4)}</code>.
+                        </>
+                      ) : (
+                        <>
+                          Raw coordinate <code>{calc.rawValue.toFixed(4)}</code> lies safely within bounds [{bounds.lower[calc.dimIdx]}, {bounds.upper[calc.dimIdx]}]. No clipping needed.
+                        </>
+                      )}
                       <br />
-                      Applied bound constraint: <code>x'₁₁ = clip(7.67, -5, 5) = 5.0</code>.
-                      <br />
-                      Full candidate position: <strong>X'¹ = (5.0, -1.0)</strong>.
+                      Full Candidate Vector: <strong>v_{calc.sourceId} = ({calc.candidatePos.map((c) => c.toFixed(3)).join(', ')})</strong>.
                     </p>
                   </div>
 
                   <div className="calc-step-box">
                     <span className="calc-step-label">3. Objective &amp; Fitness Evaluation:</span>
                     <p>
-                      f(X'¹) = 5.0² + (-1.0)² = 25.0 + 1.0 = <strong>26.0</strong>
+                      Candidate objective: <code>f(v_{calc.sourceId}) = {calc.candidateF.toFixed(4)}</code>
                       <br />
-                      fit(X'¹) = 1 / (1 + 26.0) = 1 / 27 ≈ <strong>0.037</strong>
+                      Candidate fitness: <code>fit(v_{calc.sourceId}) = {calc.candidateFit.toFixed(4)}</code>
                       <br />
-                      <em>Comparison:</em> Existing fit(X¹) = 1 / (1 + 5.0) = 1/6 ≈ <strong>0.167</strong>.
+                      <em>Comparison:</em> Current source fitness <code>fit(X^{calc.sourceId}) = {calc.oldFit.toFixed(4)}</code>.
                     </p>
                   </div>
 
-                  <div className="calc-decision-box calc-decision-box--rejected">
-                    <span className="calc-decision-badge">Decision: REJECTED</span>
-                    <p>{stage.calculation.resultText}</p>
+                  <div className={`calc-decision-box calc-decision-box--${calc.accepted ? 'accepted' : 'rejected'}`}>
+                    <span className="calc-decision-badge">Decision: {calc.accepted ? 'ACCEPTED' : 'REJECTED'}</span>
+                    <p>{calc.resultText}</p>
+                  </div>
+
+                  {/* Onlooker Probability Calculation Table */}
+                  <div className="calc-step-box" style={{ marginTop: 'var(--space-4)' }}>
+                    <span className="calc-step-label">4. Onlooker Selection Probabilities Formula:</span>
+                    <p style={{ marginBottom: '8px' }}>
+                      Formula: <code>p_m = 0.9 × (fit_m / max(fit)) + 0.1</code> &nbsp;·&nbsp; (max fit = {calc.maxFit})
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {calc.probBreakdown.map((row) => (
+                        <div key={row.id} style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: 'var(--color-text-secondary)' }}>
+                          • Source #{row.id}: fit = {row.fit} → <strong>p_{row.id} = {(row.p * 100).toFixed(1)}%</strong>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -294,52 +328,49 @@ export function WorkedExample() {
                     <div className="calc-param">
                       <span className="calc-param__k">Selected Source:</span>
                       <span className="calc-param__v">
-                        X¹ = ({stage.calculation.sourcePos.join(', ')})
+                        X^{calc.sourceId} = ({calc.sourcePos.map((c) => c.toFixed(3)).join(', ')})
                       </span>
                     </div>
                     <div className="calc-param">
                       <span className="calc-param__k">Selection Probability:</span>
-                      <span className="calc-param__v">p₁ = {stage.calculation.pm}</span>
+                      <span className="calc-param__v">p_{calc.sourceId} = {(calc.pm * 100).toFixed(1)}%</span>
                     </div>
                     <div className="calc-param">
-                      <span className="calc-param__k">Waggle Gate Draw:</span>
-                      <span className="calc-param__v">r = {stage.calculation.r}</span>
+                      <span className="calc-param__k">Selection Gate Draw:</span>
+                      <span className="calc-param__v">r = {calc.r.toFixed(3)}</span>
                     </div>
                     <div className="calc-param">
-                      <span className="calc-param__k">Gate Check:</span>
+                      <span className="calc-param__k">Gate Status:</span>
                       <span className="calc-param__v calc-param__v--pass">
-                        0.39 &lt; 0.729 (Passed)
+                        {calc.r.toFixed(3)} &lt; {calc.pm.toFixed(3)} (Passed)
                       </span>
                     </div>
                   </div>
 
                   <div className="calc-step-box">
-                    <span className="calc-step-label">1. Perturbation with Partner Source 5:</span>
+                    <span className="calc-step-label">1. Perturbation with Partner Source #{calc.partnerId}:</span>
                     <p>
-                      Partner X⁵ = ({stage.calculation.partnerPos.join(', ')}), dimension x₁, weight φ = {stage.calculation.phi}
+                      Partner X^{calc.partnerId} = ({calc.partnerPos.map((c) => c.toFixed(3)).join(', ')}), dimension {calc.varName}, weight φ = {calc.phi.toFixed(3)}
                     </p>
                     <code>
-                      x'₁₁ = x₁₁ + φ₁₁(x₁₁ - x₅₁) = 2 + 0.68 × (2 - 3) = 1.32
+                      v_{calc.sourceId} = ({calc.candidatePos.map((c) => c.toFixed(3)).join(', ')})
                     </code>
-                    <p style={{ marginTop: '4px' }}>
-                      Within bounds [-5, 5] (no clipping required). Full candidate: <strong>X'¹ = (1.32, -1.0)</strong>.
-                    </p>
                   </div>
 
                   <div className="calc-step-box">
                     <span className="calc-step-label">2. Objective &amp; Fitness Evaluation:</span>
                     <p>
-                      f(X'¹) = 1.32² + (-1.0)² = 1.7424 + 1.0 = <strong>2.742</strong>
+                      Candidate objective: <code>f(v) = {calc.candidateF.toFixed(4)}</code>
                       <br />
-                      fit(X'¹) = 1 / (1 + 2.7424) ≈ <strong>0.267</strong>
+                      Candidate fitness: <code>fit(v) = {calc.candidateFit.toFixed(4)}</code>
                       <br />
-                      <em>Comparison:</em> Existing fit(X¹) = <strong>0.167</strong>.
+                      <em>Comparison:</em> Existing source fitness = <code>{calc.oldFit.toFixed(4)}</code>.
                     </p>
                   </div>
 
-                  <div className="calc-decision-box calc-decision-box--accepted">
-                    <span className="calc-decision-badge">Decision: ACCEPTED</span>
-                    <p>{stage.calculation.resultText}</p>
+                  <div className={`calc-decision-box calc-decision-box--${calc.accepted ? 'accepted' : 'rejected'}`}>
+                    <span className="calc-decision-badge">Decision: {calc.accepted ? 'ACCEPTED' : 'REJECTED'}</span>
+                    <p>{calc.resultText}</p>
                   </div>
                 </div>
               )}
@@ -349,47 +380,64 @@ export function WorkedExample() {
                 <div className="calc-body">
                   <div className="calc-param-grid">
                     <div className="calc-param">
-                      <span className="calc-param__k">Abandoned Source:</span>
-                      <span className="calc-param__v">#5 at (3, 0)</span>
+                      <span className="calc-param__k">Configured Limit:</span>
+                      <span className="calc-param__v">{calc.limit}</span>
                     </div>
                     <div className="calc-param">
-                      <span className="calc-param__k">Stagnation Counter:</span>
-                      <span className="calc-param__v">t₅ = 2 &gt; limit = 1</span>
+                      <span className="calc-param__k">Highest Stagnation Trial:</span>
+                      <span className="calc-param__v">
+                        Source #{calc.targetSource.sourceId} (trial = {calc.targetSource.trial})
+                      </span>
                     </div>
                     <div className="calc-param">
-                      <span className="calc-param__k">Uniform Draw r₁:</span>
-                      <span className="calc-param__v">{stage.calculation.r1}</span>
+                      <span className="calc-param__k">Abandonment Condition:</span>
+                      <span className="calc-param__v">
+                        trial &gt; limit ({calc.targetSource.trial} &gt; {calc.limit} → {calc.hasAbandoned ? 'TRIGGERED' : 'Not Triggered'})
+                      </span>
                     </div>
                     <div className="calc-param">
-                      <span className="calc-param__k">Uniform Draw r₂:</span>
-                      <span className="calc-param__v">{stage.calculation.r2}</span>
+                      <span className="calc-param__k">Scout Action:</span>
+                      <span className="calc-param__v">
+                        {calc.hasAbandoned ? 'Abandon & Re-randomize' : 'Retain (within limit)'}
+                      </span>
                     </div>
                   </div>
 
                   <div className="calc-step-box">
-                    <span className="calc-step-label">1. Uniform Random Replacement:</span>
+                    <span className="calc-step-label">1. Scout Uniform Random Formula:</span>
                     <p>
-                      Formula: <code>x_mi = l_i + rand(0, 1) × (u_i - l_i)</code>
+                      When a source stagnates past limit, a scout bee abandons it and scatters a fresh random candidate inside the problem bounds:
                     </p>
                     <code>
-                      x'₅₁ = -5 + 0.43 × (5 - (-5)) = -0.7
-                      <br />
-                      x'₅₂ = -5 + 0.42 × (5 - (-5)) = -0.8
+                      x_mi = l_i + rand(0, 1) × (u_i - l_i)
                     </code>
+                    <p style={{ marginTop: '6px' }}>
+                      {calc.hasAbandoned ? 'Actual scout replacement:' : 'Demonstration of scout replacement:'}
+                      <br />
+                      Old coordinate: <code>({calc.targetSource.oldX.map((c) => c.toFixed(3)).join(', ')})</code>
+                      <br />
+                      New uniform coordinate: <strong>({calc.targetSource.newX.map((c) => c.toFixed(3)).join(', ')})</strong>
+                    </p>
                   </div>
 
                   <div className="calc-step-box">
-                    <span className="calc-step-label">2. Scout Objective &amp; Fitness:</span>
+                    <span className="calc-step-label">2. Re-evaluated Objective &amp; Fitness:</span>
                     <p>
-                      f(X'⁵) = (-0.7)² + (-0.8)² = 0.49 + 0.64 = <strong>1.13</strong>
+                      New objective: <code>f(X^{calc.targetSource.sourceId}) = {calc.targetSource.newF.toFixed(4)}</code>
                       <br />
-                      fit(X'⁵) = 1 / (1 + 1.13) = 1 / 2.13 ≈ <strong>0.469</strong>
+                      New fitness: <code>fit(X^{calc.targetSource.sourceId}) = {calc.targetSource.newFit.toFixed(4)}</code>
+                      <br />
+                      Trial counter reset to: <strong>t_{calc.targetSource.sourceId} = 0</strong>.
                     </p>
                   </div>
 
                   <div className="calc-decision-box calc-decision-box--accepted">
-                    <span className="calc-decision-badge">Decision: SCOUT SUCCESS</span>
-                    <p>{stage.calculation.resultText}</p>
+                    <span className="calc-decision-badge">Scout Rule Status</span>
+                    <p>
+                      {calc.hasAbandoned
+                        ? `Source #${calc.targetSource.sourceId} exceeded the limit and was successfully refreshed.`
+                        : `No source exceeded limit (${calc.limit}) in this cycle. If stagnation occurs in future cycles, this uniform random replacement is triggered.`}
+                    </p>
                   </div>
                 </div>
               )}
@@ -400,10 +448,10 @@ export function WorkedExample() {
         {/* Right Column: Visual Landscape with Swarm Positions */}
         <div className="replay-col-right">
           <ContourPlot
-            problem={sphereProblem}
+            problem={problem}
             bounds={bounds}
             population={stage.population}
-            currentEvent={contourEvent}
+            currentEvent={stage.movementEvent}
             bestSoFar={stage.bestSoFar}
           />
         </div>

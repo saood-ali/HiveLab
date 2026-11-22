@@ -1,10 +1,39 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import './SimulatorView.css';
 import { useAppState, useAppDispatch } from '../app/AppState.jsx';
 import { ABCEngine } from '../engine/abcEngine.js';
 import { ContourPlot } from './ContourPlot.jsx';
 import { FitnessProbabilityView } from './FitnessProbabilityView.jsx';
 import { ConvergenceChart } from './ConvergenceChart.jsx';
+
+function formatObjectiveCalc(problemId, coords, fVal) {
+  if (!coords || coords.length < 2 || fVal === undefined || fVal === null) return null;
+  const [c0, c1] = coords;
+  if (problemId === 'sphere-lecture' || problemId === 'sphere') {
+    const term0 = (c0 ** 2).toFixed(4);
+    const term1 = (c1 ** 2).toFixed(4);
+    return `f(${c0.toFixed(3)}, ${c1.toFixed(3)}) = (${c0.toFixed(3)})² + (${c1.toFixed(3)})² = ${term0} + ${term1} = ${fVal.toFixed(4)}`;
+  }
+  if (problemId === 'rosenbrock-practice') {
+    const t1 = ((1 - c0) ** 2).toFixed(4);
+    const t2 = (100 * ((c1 - c0 ** 2) ** 2)).toFixed(4);
+    return `f(${c0.toFixed(3)}, ${c1.toFixed(3)}) = (1 − ${c0.toFixed(3)})² + 100(${c1.toFixed(3)} − (${c0.toFixed(3)})²)² = ${t1} + ${t2} = ${fVal.toFixed(4)}`;
+  }
+  if (problemId === 'rastrigin-practice') {
+    return `f(${c0.toFixed(3)}, ${c1.toFixed(3)}) = 20 + (${c0.toFixed(3)})² − 10cos(2π·${c0.toFixed(3)}) + (${c1.toFixed(3)})² − 10cos(2π·${c1.toFixed(3)}) = ${fVal.toFixed(4)}`;
+  }
+  return `f(${coords.map((c) => c.toFixed(3)).join(', ')}) = ${fVal.toFixed(4)}`;
+}
+
+function formatFitnessCalc(fVal, fitVal) {
+  if (fVal === undefined || fVal === null || fitVal === undefined || fitVal === null) return '';
+  if (fVal >= 0) {
+    return `fit = 1 / (1 + f(x)) = 1 / (1 + ${fVal.toFixed(4)}) = ${(1 / (1 + fVal)).toFixed(4)}`;
+  } else {
+    return `fit = 1 + |f(x)| = 1 + |${fVal.toFixed(4)}| = ${(1 + Math.abs(fVal)).toFixed(4)}`;
+  }
+}
 
 export function SimulatorView() {
   const { problem, params } = useAppState();
@@ -17,11 +46,15 @@ export function SimulatorView() {
 
   // Tab selection for right-hand column: 'table' | 'probabilities' | 'convergence'
   const [activeTab, setActiveTab] = useState('table');
+  const [inspectorMode, setInspectorMode] = useState('summary'); // 'summary' | 'breakdown'
 
   // Convergence history tracking: cycle 0 starts with initial best-so-far
   const [convergenceHistory, setConvergenceHistory] = useState(() => [
     { cycle: 0, bestF: engine.bestSoFar.f },
   ]);
+
+  const inspectorCardRef = useRef(null);
+  const decisionBadgeRef = useRef(null);
 
   // UI state synchronized with engine state
   const [engineState, setEngineState] = useState(() => ({
@@ -120,7 +153,29 @@ export function SimulatorView() {
     setConvergenceHistory([{ cycle: 0, bestF: engine.bestSoFar.f }]);
   }, [engine]);
 
-  // Keyboard navigation: ArrowRight / Space for Next, ArrowLeft for Back, 'R' for Reset
+  // Fast forward simulation to the very end
+  const handleFastForward = useCallback(() => {
+    if (engine.isTerminated) return;
+    const ev = engine.fastForward();
+
+    // Reconstruct complete convergence history across all cycles
+    const points = [{ cycle: 0, bestF: engine.history[0]?.bestSoFar?.f ?? engine.bestSoFar.f }];
+    for (const snap of engine.history) {
+      if (snap.currentEvent?.type === 'CYCLE_SUMMARY') {
+        const c = snap.currentEvent.cycle;
+        if (!points.some((p) => p.cycle === c)) {
+          points.push({ cycle: c, bestF: snap.currentEvent.currentBestF ?? snap.bestSoFar.f });
+        }
+      }
+    }
+    if (!points.some((p) => p.cycle === engine.params.T)) {
+      points.push({ cycle: engine.params.T, bestF: engine.bestSoFar.f });
+    }
+    setConvergenceHistory(points);
+    syncState(ev);
+  }, [engine, syncState]);
+
+  // Keyboard navigation: ArrowRight / Space for Next, ArrowLeft for Back, 'R' for Reset, 'F' for Fast Forward
   useEffect(() => {
     function handleKeyDown(e) {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -133,11 +188,32 @@ export function SimulatorView() {
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         handleReset();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        handleFastForward();
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNextStep, handlePrevStep, handleReset]);
+  }, [handleNextStep, handlePrevStep, handleReset, handleFastForward]);
+
+  // Subtle GSAP micro-interaction on step change to smoothly highlight updates
+  useEffect(() => {
+    if (inspectorCardRef.current) {
+      gsap.fromTo(
+        inspectorCardRef.current,
+        { opacity: 0.85, y: 3 },
+        { opacity: 1, y: 0, duration: 0.18, ease: 'power1.out' }
+      );
+    }
+    if (decisionBadgeRef.current) {
+      gsap.fromTo(
+        decisionBadgeRef.current,
+        { scale: 0.94 },
+        { scale: 1, duration: 0.22, ease: 'back.out(1.5)' }
+      );
+    }
+  }, [engineState.stepIndex]);
 
   const {
     stepIndex,
@@ -185,14 +261,6 @@ export function SimulatorView() {
           <span className="sim-controls__cycle-info">
             Cycle <strong>{cycle}</strong> of {params.T} &nbsp;·&nbsp; Step #{stepIndex}
           </span>
-          <button
-            className="btn btn--outline"
-            onClick={() => dispatch({ type: 'SET_VIEW', view: 'replay' })}
-            title="View complete step-by-step worked example with mathematical breakdown"
-            style={{ fontSize: '11px', padding: '3px 8px', marginLeft: 'var(--space-2)' }}
-          >
-            📖 Worked Example
-          </button>
         </div>
 
         <div className="sim-controls__actions">
@@ -219,13 +287,22 @@ export function SimulatorView() {
           >
             {isTerminated ? 'Finished' : 'Next Step →'}
           </button>
+          <button
+            className="btn btn--secondary"
+            onClick={handleFastForward}
+            disabled={isTerminated}
+            title={isTerminated ? 'Optimization already completed' : 'Fast-forward simulation to the final cycle (F)'}
+            aria-label="Fast forward to final answer"
+          >
+            Fast Forward →|
+          </button>
         </div>
       </section>
 
       {/* ── Best-so-far Banner ──────────────────────────────────────── */}
       <section className="sim-best-banner" aria-label="Best Solution Memorized">
         <div>
-          <div className="sim-best-banner__label">★ Best Solution Memorized Outside Population</div>
+          <div className="sim-best-banner__label">Best Solution Memorized Outside Population (x*)</div>
           <div className="sim-best-banner__val">
             f(x*) = {bestSoFar.f.toFixed(6)} &nbsp; (fit = {bestSoFar.fit.toFixed(6)})
           </div>
@@ -251,83 +328,579 @@ export function SimulatorView() {
             bestSoFar={bestSoFar}
           />
 
-          {/* Step Inspector / Decision Card */}
-          <section className="sim-card" aria-labelledby="step-inspector-title">
+          {/* Step Inspector / Decision Card with Summary & Math Breakdown modes */}
+          <section ref={inspectorCardRef} className="sim-card" aria-labelledby="step-inspector-title">
             <div className="sim-card__header">
               <h2 className="sim-card__title" id="step-inspector-title">
                 <span>🐝</span> {currentEvent.title || 'Current Step'}
               </h2>
 
-              {currentEvent.accepted !== undefined && (
-                <span
-                  className={`sim-card__decision ${
-                    currentEvent.accepted
-                      ? 'sim-card__decision--accepted'
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                {/* Mode toggle between Summary and detailed Math Breakdown */}
+                <div className="sim-mode-toggle" role="tablist" aria-label="Inspector mode">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={inspectorMode === 'summary'}
+                    className={`sim-mode-tab${inspectorMode === 'summary' ? ' sim-mode-tab--active' : ''}`}
+                    onClick={() => setInspectorMode('summary')}
+                  >
+                    Summary
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={inspectorMode === 'breakdown'}
+                    className={`sim-mode-tab${inspectorMode === 'breakdown' ? ' sim-mode-tab--active' : ''}`}
+                    onClick={() => setInspectorMode('breakdown')}
+                  >
+                    Math Breakdown
+                  </button>
+                </div>
+
+                {currentEvent.accepted !== undefined && (
+                  <span
+                    ref={decisionBadgeRef}
+                    className={`sim-card__decision ${
+                      currentEvent.accepted
+                        ? 'sim-card__decision--accepted'
+                        : currentEvent.skipped
+                        ? 'sim-card__decision--skipped'
+                        : 'sim-card__decision--rejected'
+                    }`}
+                  >
+                    {currentEvent.accepted
+                      ? 'Accepted'
                       : currentEvent.skipped
-                      ? 'sim-card__decision--skipped'
-                      : 'sim-card__decision--rejected'
-                  }`}
-                >
-                  {currentEvent.accepted
-                    ? 'Accepted'
-                    : currentEvent.skipped
-                    ? 'Skipped'
-                    : 'Rejected'}
-                </span>
-              )}
-              {currentEvent.type === 'SCOUT_REPLACED' && (
-                <span className="sim-card__decision sim-card__decision--scouted">
-                  Scout Replacement
-                </span>
-              )}
+                      ? 'Skipped'
+                      : 'Rejected'}
+                  </span>
+                )}
+                {currentEvent.type === 'SCOUT_REPLACED' && (
+                  <span className="sim-card__decision sim-card__decision--scouted">
+                    Scout Replacement
+                  </span>
+                )}
+              </div>
             </div>
 
-            <p className="sim-card__summary">{currentEvent.summary}</p>
+            {inspectorMode === 'summary' ? (
+              <>
+                <p className="sim-card__summary">{currentEvent.summary}</p>
 
-            {/* Random Draw Ledger */}
-            {currentEvent.draws && currentEvent.draws.length > 0 && (
-              <div className="sim-ledger">
-                <div className="sim-ledger__label">Random Draw Ledger (Seed: {params.seed})</div>
-                <div className="sim-ledger__pills">
-                  {currentEvent.draws.map((d, i) => (
-                    <span className="sim-ledger__pill" key={i}>
-                      {d.label}: <strong>{d.value}</strong>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Collapsible Formula & Math Substitution */}
-            {(currentEvent.formula || currentEvent.details) && (
-              <details className="sim-details" open>
-                <summary>Calculation &amp; Formula Substitution</summary>
-                <div className="sim-details__content">
-                  {currentEvent.formula && (
-                    <div style={{ marginBottom: 'var(--space-2)' }}>
-                      <strong>Equation:</strong> {currentEvent.formula}
+                {/* Random Draw Ledger */}
+                {currentEvent.draws && currentEvent.draws.length > 0 && (
+                  <div className="sim-ledger">
+                    <div className="sim-ledger__label">Random Draw Ledger (Seed: {params.seed})</div>
+                    <div className="sim-ledger__pills">
+                      {currentEvent.draws.map((d, i) => (
+                        <span className="sim-ledger__pill" key={i}>
+                          {d.label}: <strong>{d.value}</strong>
+                        </span>
+                      ))}
                     </div>
-                  )}
-                  {currentEvent.rawValue !== undefined && (
-                    <div>
-                      <strong>Raw coordinate:</strong> {currentEvent.rawValue.toFixed(4)}
-                      {currentEvent.clipped && (
-                        <span> → Clipped to bounds: {currentEvent.clippedValue.toFixed(4)}</span>
+                  </div>
+                )}
+
+                {/* Collapsible Formula & Math Substitution */}
+                {(currentEvent.formula || currentEvent.details) && (
+                  <details className="sim-details" open>
+                    <summary>Formula &amp; Calculation</summary>
+                    <div className="sim-details__content">
+                      {currentEvent.formula && (
+                        <div style={{ marginBottom: 'var(--space-2)' }}>
+                          <div className="calc-equation-tag">Perturbation Formula:</div>
+                          <code className="calc-equation-code">v_i,j = x_i,j + φ_i,j × (x_i,j - x_k,j)</code>
+                          <div className="calc-equation-tag" style={{ marginTop: '4px' }}>Substituted Calculation:</div>
+                          <code className="calc-equation-code">{currentEvent.formula}</code>
+                        </div>
+                      )}
+                      {currentEvent.rawValue !== undefined && (
+                        <div style={{ marginBottom: 'var(--space-2)' }}>
+                          <div className="calc-equation-tag">Boundary Constraint Check:</div>
+                          <code className="calc-equation-code">
+                            {currentEvent.clipped
+                              ? `Raw coordinate ${currentEvent.rawValue.toFixed(4)} exceeded bounds → Clipped to ${currentEvent.clippedValue.toFixed(4)}`
+                              : `Raw coordinate ${currentEvent.rawValue.toFixed(4)} lies safely within bounds [${(params.bounds?.[currentEvent.dim]?.[0] ?? problem.bounds.lower[currentEvent.dim])}, ${(params.bounds?.[currentEvent.dim]?.[1] ?? problem.bounds.upper[currentEvent.dim])}]`}
+                          </code>
+                        </div>
+                      )}
+                      {currentEvent.oldF !== undefined && (
+                        <div style={{ marginBottom: 'var(--space-2)' }}>
+                          <div className="calc-equation-tag">Objective &amp; Fitness Comparison:</div>
+                          <code className="calc-equation-code">
+                            f(cand) = {currentEvent.candF.toFixed(4)} → fit(cand) = {currentEvent.candFit?.toFixed(4)}
+                            <br />
+                            f(curr) = {currentEvent.oldF.toFixed(4)} → fit(curr) = {currentEvent.oldFit?.toFixed(4)}
+                            <br />
+                            Greedy Rule: fit(cand) {currentEvent.accepted ? '>' : '≤'} fit(curr) → {currentEvent.accepted ? 'Accepted (trial = 0)' : 'Rejected (trial incremented)'}
+                          </code>
+                        </div>
+                      )}
+                      {currentEvent.details && (
+                        <div style={{ marginTop: 'var(--space-1)' }}>{currentEvent.details}</div>
                       )}
                     </div>
-                  )}
-                  {currentEvent.oldF !== undefined && (
-                    <div style={{ marginTop: 'var(--space-1)' }}>
-                      <strong>Comparison:</strong> f(candidate) = {currentEvent.candF.toFixed(4)} vs f(current) = {currentEvent.oldF.toFixed(4)}
-                      <br />
-                      <strong>Greedy choice:</strong> {currentEvent.accepted ? 'Strictly better → Accepted (trial = 0)' : 'Not better → Rejected (trial++)'}
+                  </details>
+                )}
+              </>
+            ) : (
+              /* Detailed Math Breakdown View */
+              <div className="calc-body" style={{ marginTop: 'var(--space-2)' }}>
+                {/* Step 0 (INIT) */}
+                {currentEvent.phase === 'INIT' && (
+                  <>
+                    <div className="calc-param-grid">
+                      <div className="calc-param">
+                        <span className="calc-param__k">Problem:</span>
+                        <span className="calc-param__v">{problem.name}</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Objective Equation:</span>
+                        <span className="calc-param__v">{problem.objective}</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Initial Best Source:</span>
+                        <span className="calc-param__v">#{bestSoFar.id} (f = {bestSoFar.f.toFixed(4)})</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Total Sources Np:</span>
+                        <span className="calc-param__v">{population.length}</span>
+                      </div>
                     </div>
-                  )}
-                  {currentEvent.details && (
-                    <div style={{ marginTop: 'var(--space-1)' }}>{currentEvent.details}</div>
-                  )}
-                </div>
-              </details>
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">1. Fitness Transformation:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Formula:</span>
+                          <code className="calc-equation-code">
+                            fit(x) = 1 / (1 + f(x)) &nbsp; [for f(x) ≥ 0] &nbsp;|&nbsp; fit(x) = 1 + |f(x)| &nbsp; [for f(x) &lt; 0]
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Sample Calculation on Source #{population[0]?.id}:</span>
+                          <code className="calc-equation-code">
+                            Coordinates: [{population[0]?.x.map((c) => c.toFixed(3)).join(', ')}]
+                            <br />
+                            Objective: {formatObjectiveCalc(problem.id, population[0]?.x, population[0]?.f)}
+                            <br />
+                            Fitness: {formatFitnessCalc(population[0]?.f, population[0]?.fit)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">2. Initial Random Placement:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Initialization Formula:</span>
+                          <code className="calc-equation-code">
+                            x_i,j = l_j + rand(0, 1) × (u_j - l_j) &nbsp; [for each food source i and dimension j]
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Configured Domain Bounds:</span>
+                          <code className="calc-equation-code">
+                            x₁ ∈ [{(params.bounds?.[0]?.[0] ?? problem.bounds.lower[0])}, {(params.bounds?.[0]?.[1] ?? problem.bounds.upper[0])}], &nbsp;
+                            x₂ ∈ [{(params.bounds?.[1]?.[0] ?? problem.bounds.lower[1])}, {(params.bounds?.[1]?.[1] ?? problem.bounds.upper[1])}]
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* EMPLOYED or ONLOOKER with candidate move */}
+                {(currentEvent.phase === 'EMPLOYED' || currentEvent.phase === 'ONLOOKER') && currentEvent.candidateX && (
+                  <>
+                    <div className="calc-param-grid">
+                      <div className="calc-param">
+                        <span className="calc-param__k">Current Source:</span>
+                        <span className="calc-param__v">
+                          X^{currentEvent.sourceId} = ({currentEvent.oldX?.map((c) => c.toFixed(3)).join(', ')})
+                        </span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Partner Source:</span>
+                        <span className="calc-param__v">
+                          X^{currentEvent.partnerId} = ({(currentEvent.partnerPos || population.find((s) => s.id === currentEvent.partnerId)?.x || [0, 0]).map((c) => c.toFixed(3)).join(', ')})
+                        </span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Perturbed Dimension:</span>
+                        <span className="calc-param__v">{currentEvent.dimName || problem.varNames[currentEvent.dim]} (dim {currentEvent.dim + 1})</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Random Weight φ:</span>
+                        <span className="calc-param__v">{currentEvent.phi?.toFixed(4)}</span>
+                      </div>
+                    </div>
+
+                    {/* Onlooker Waggle Gate Check (if this is an Onlooker move) */}
+                    {currentEvent.phase === 'ONLOOKER' && currentEvent.r !== undefined && (
+                      <div className="calc-step-box">
+                        <span className="calc-step-label">Waggle Dance Selection Gate:</span>
+                        <div className="calc-equation-group">
+                          <div className="calc-equation-row">
+                            <span className="calc-equation-tag">General Decision Rule:</span>
+                            <code className="calc-equation-code">
+                              Draw r ~ U(0, 1). If r &lt; p_m → Exploit source | If r ≥ p_m → Skip source
+                            </code>
+                          </div>
+                          <div className="calc-equation-row">
+                            <span className="calc-equation-tag">Substituted Gate Evaluation:</span>
+                            <code className="calc-equation-code">
+                              r = {currentEvent.r.toFixed(4)} &lt; p_{currentEvent.sourceId} = {currentEvent.pm?.toFixed(4)} &nbsp;→&nbsp; PASSED (Onlooker bee exploits source #{currentEvent.sourceId})
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">1. Perturbation Formula &amp; Calculation:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Formula:</span>
+                          <code className="calc-equation-code">
+                            v_i,j = x_i,j + φ_i,j × (x_i,j - x_k,j) &nbsp; [where k ≠ i, φ ∈ [-1, 1]]
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Substituted Calculation:</span>
+                          <code className="calc-equation-code">
+                            v_{currentEvent.sourceId},{currentEvent.dim + 1} = {currentEvent.oldX?.[currentEvent.dim]?.toFixed(3)} + ({currentEvent.phi?.toFixed(3)}) × ({currentEvent.oldX?.[currentEvent.dim]?.toFixed(3)} - {(currentEvent.partnerPos || population.find((s) => s.id === currentEvent.partnerId)?.x || [0, 0])[currentEvent.dim]?.toFixed(3)})
+                            <br />
+                            = {currentEvent.oldX?.[currentEvent.dim]?.toFixed(3)} + ({(currentEvent.phi * (currentEvent.oldX?.[currentEvent.dim] - (currentEvent.partnerPos || population.find((s) => s.id === currentEvent.partnerId)?.x || [0, 0])[currentEvent.dim])).toFixed(4)})
+                            <br />
+                            = {currentEvent.rawValue?.toFixed(4)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`calc-step-box${currentEvent.clipped ? ' calc-step-box--warning' : ''}`}>
+                      <span className="calc-step-label">2. Boundary Constraint &amp; Clamping:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Formula:</span>
+                          <code className="calc-equation-code">
+                            v_i,j = clamp(v_i,j, l_j, u_j) = max(l_j, min(u_j, v_i,j))
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Substituted Calculation:</span>
+                          <code className="calc-equation-code">
+                            clamp({currentEvent.rawValue?.toFixed(4)}, {(params.bounds?.[currentEvent.dim]?.[0] ?? problem.bounds.lower[currentEvent.dim])}, {(params.bounds?.[currentEvent.dim]?.[1] ?? problem.bounds.upper[currentEvent.dim])}) = {currentEvent.clipped ? `${currentEvent.clippedValue?.toFixed(4)} (Clipped: exceeded boundary)` : `${currentEvent.rawValue?.toFixed(4)} (Within bounds: no clipping needed)`}
+                          </code>
+                        </div>
+                      </div>
+                      <p style={{ marginTop: 'var(--space-2)' }}>
+                        Full Candidate Vector: <strong>v_{currentEvent.sourceId} = ({currentEvent.candidateX?.map((c) => c.toFixed(3)).join(', ')})</strong>
+                      </p>
+                    </div>
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">3. Objective Function &amp; Fitness Evaluation:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Objective Formula:</span>
+                          <code className="calc-equation-code">
+                            {problem.objective}
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Candidate Objective Calculation:</span>
+                          <code className="calc-equation-code">
+                            {formatObjectiveCalc(problem.id, currentEvent.candidateX, currentEvent.candF)}
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Fitness Formula:</span>
+                          <code className="calc-equation-code">
+                            fit(x) = 1 / (1 + f(x)) &nbsp; [for f(x) ≥ 0] &nbsp;|&nbsp; fit(x) = 1 + |f(x)| &nbsp; [for f(x) &lt; 0]
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Candidate Fitness Calculation:</span>
+                          <code className="calc-equation-code">
+                            fit(v_{currentEvent.sourceId}) = {formatFitnessCalc(currentEvent.candF, currentEvent.candFit)}
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Existing Source Fitness Calculation:</span>
+                          <code className="calc-equation-code">
+                            fit(X^{currentEvent.sourceId}) = {formatFitnessCalc(currentEvent.oldF, currentEvent.oldFit)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`calc-decision-box calc-decision-box--${currentEvent.accepted ? 'accepted' : 'rejected'}`}>
+                      <span className="calc-decision-badge">Greedy Selection Decision: {currentEvent.accepted ? 'ACCEPTED' : 'REJECTED'}</span>
+                      <div className="calc-equation-group" style={{ margin: 'var(--space-2) 0' }}>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag" style={{ color: currentEvent.accepted ? '#166534' : '#991b1b' }}>Selection Rule:</span>
+                          <code className="calc-equation-code">
+                            If fit(v_i) &gt; fit(X^i) → Accept candidate v_i &amp; reset trial counter = 0
+                            <br />
+                            If fit(v_i) ≤ fit(X^i) → Reject candidate v_i &amp; increment trial counter = trial + 1
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag" style={{ color: currentEvent.accepted ? '#166534' : '#991b1b' }}>Substituted Comparison:</span>
+                          <code className="calc-equation-code">
+                            fit(v_{currentEvent.sourceId}) = {currentEvent.candFit?.toFixed(4)} {currentEvent.accepted ? '>' : '≤'} fit(X^{currentEvent.sourceId}) = {currentEvent.oldFit?.toFixed(4)}
+                            &nbsp;→&nbsp; {currentEvent.accepted ? 'ACCEPTED (Source updated; trial resets to 0)' : `REJECTED (Original source kept; trial becomes ${currentEvent.newTrial})`}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Onlooker Probabilities Breakdown */}
+                    <div className="calc-step-box" style={{ marginTop: 'var(--space-3)' }}>
+                      <span className="calc-step-label">4. Onlooker Selection Probabilities:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Formula:</span>
+                          <code className="calc-equation-code">
+                            p_m = 0.9 × (fit_m / max(fit)) + 0.1 &nbsp; [scaled roulette with 0.1 exploration floor]
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Colony Maximum Fitness:</span>
+                          <code className="calc-equation-code">
+                            max(fit) = {Math.max(...population.map((s) => s.fit)).toFixed(4)}
+                          </code>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {population.map((src) => {
+                          const maxFit = Math.max(...population.map((s) => s.fit));
+                          const ratio = (src.fit / maxFit).toFixed(4);
+                          const pCalc = (0.9 * (src.fit / maxFit) + 0.1).toFixed(4);
+                          return (
+                            <div key={src.id} style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: 'var(--color-text-secondary)' }}>
+                              • Source #{src.id}: <code>p_{src.id} = 0.9 × ({src.fit.toFixed(4)} / {maxFit.toFixed(4)}) + 0.1 = 0.9 × {ratio} + 0.1 = {pCalc} ({(src.p * 100).toFixed(1)}%)</code>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ONLOOKER when skipped */}
+                {currentEvent.phase === 'ONLOOKER' && currentEvent.skipped && (
+                  <div className="calc-step-box">
+                    <span className="calc-step-label">Waggle Gate Check:</span>
+                    <div className="calc-equation-group">
+                      <div className="calc-equation-row">
+                        <span className="calc-equation-tag">General Decision Rule:</span>
+                        <code className="calc-equation-code">
+                          Draw r ~ U(0, 1). If r &lt; p_m → Exploit source | If r ≥ p_m → Skip source
+                        </code>
+                      </div>
+                      <div className="calc-equation-row">
+                        <span className="calc-equation-tag">Substituted Gate Check:</span>
+                        <code className="calc-equation-code">
+                          r = {currentEvent.r?.toFixed(4)} ≥ p_{currentEvent.sourceId} = {currentEvent.pm?.toFixed(4)}
+                          &nbsp;→&nbsp; SKIPPED (Gate failed; onlooker does not exploit this source; trial remains {currentEvent.trial})
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SCOUT Phase */}
+                {currentEvent.phase === 'SCOUT' && (
+                  <>
+                    <div className="calc-param-grid">
+                      <div className="calc-param">
+                        <span className="calc-param__k">Configured Limit:</span>
+                        <span className="calc-param__v">{params.limit}</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Abandonment Rule:</span>
+                        <span className="calc-param__v">trial &gt; limit</span>
+                      </div>
+                    </div>
+
+                    {currentEvent.abandonedSources?.length > 0 ? (
+                      currentEvent.abandonedSources.map((ab, i) => (
+                        <div key={i} className="calc-step-box">
+                          <span className="calc-step-label">Scout Abandonment on Source #{ab.sourceId}:</span>
+                          <div className="calc-equation-group">
+                            <div className="calc-equation-row">
+                              <span className="calc-equation-tag">Abandonment Condition Check:</span>
+                              <code className="calc-equation-code">
+                                trial = {ab.trial} &gt; limit = {params.limit} &nbsp;→&nbsp; ABANDONED (Exceeded limit)
+                              </code>
+                            </div>
+                            <div className="calc-equation-row">
+                              <span className="calc-equation-tag">General Uniform Random Formula:</span>
+                              <code className="calc-equation-code">
+                                x_i,j = l_j + rand(0, 1) × (u_j - l_j)
+                              </code>
+                            </div>
+                            <div className="calc-equation-row">
+                              <span className="calc-equation-tag">Substituted Coordinates:</span>
+                              <code className="calc-equation-code">
+                                Old position: ({ab.oldX.map((c) => c.toFixed(3)).join(', ')})
+                                <br />
+                                New position: ({ab.newX.map((c) => c.toFixed(3)).join(', ')})
+                              </code>
+                            </div>
+                            <div className="calc-equation-row">
+                              <span className="calc-equation-tag">New Evaluation:</span>
+                              <code className="calc-equation-code">
+                                Objective: {formatObjectiveCalc(problem.id, ab.newX, ab.newF)}
+                                <br />
+                                Fitness: {formatFitnessCalc(ab.newF, ab.newFit)}
+                              </code>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="calc-step-box">
+                        <span className="calc-step-label">Scout Audit Result:</span>
+                        <div className="calc-equation-group">
+                          <div className="calc-equation-row">
+                            <span className="calc-equation-tag">General Abandonment Rule:</span>
+                            <code className="calc-equation-code">
+                              trial_i &gt; limit &nbsp;→&nbsp; Source i abandoned and randomly regenerated
+                            </code>
+                          </div>
+                          <div className="calc-equation-row">
+                            <span className="calc-equation-tag">Colony Audit Check:</span>
+                            <code className="calc-equation-code">
+                              All sources have trial counters ≤ {params.limit} (highest trial is {Math.max(...population.map((s) => s.t), 0)}). No food source is abandoned.
+                            </code>
+                          </div>
+                          <div className="calc-equation-row">
+                            <span className="calc-equation-tag">Scout Replacement Formula (Standby):</span>
+                            <code className="calc-equation-code">
+                              x_i,j = l_j + rand(0, 1) × (u_j - l_j)
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* MEMORISE Phase */}
+                {currentEvent.phase === 'MEMORISE' && (
+                  <div className="calc-step-box">
+                    <span className="calc-step-label">Memorization Rule:</span>
+                    <div className="calc-equation-group">
+                      <div className="calc-equation-row">
+                        <span className="calc-equation-tag">General Memorization Rule:</span>
+                        <code className="calc-equation-code">
+                          If max_i(fit(X^i)) &gt; fit(X_best_stored) → X_best_stored ← argmax_i(fit(X^i))
+                        </code>
+                      </div>
+                      <div className="calc-equation-row">
+                        <span className="calc-equation-tag">Current Colony Best vs Stored Best:</span>
+                        <code className="calc-equation-code">
+                          Colony Best: Source #{population.reduce((best, s) => (s.fit > best.fit ? s : best), population[0])?.id} (f = {population.reduce((best, s) => (s.fit > best.fit ? s : best), population[0])?.f.toFixed(6)}, fit = {population.reduce((best, s) => (s.fit > best.fit ? s : best), population[0])?.fit.toFixed(6)})
+                          <br />
+                          Memorized Global Best: Source #{bestSoFar.id} at ({bestSoFar.x.map((c) => c.toFixed(4)).join(', ')}) with f = {bestSoFar.f.toFixed(6)}, fit = {bestSoFar.fit.toFixed(6)}
+                        </code>
+                      </div>
+                      <div className="calc-equation-row">
+                        <span className="calc-equation-tag">Optimum Preservation Principle:</span>
+                        <code className="calc-equation-code">
+                          External storage guarantees that the global optimum is permanently retained even if the food source is later exhausted and abandoned by scout bees.
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TERMINATED (Final Answer Breakdown) */}
+                {currentEvent.phase === 'TERMINATED' && (
+                  <>
+                    <div className="calc-param-grid">
+                      <div className="calc-param">
+                        <span className="calc-param__k">Problem:</span>
+                        <span className="calc-param__v">{problem.name}</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Total Cycles Completed:</span>
+                        <span className="calc-param__v">{params.T} / {params.T}</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Total Steps Executed:</span>
+                        <span className="calc-param__v">{stepIndex}</span>
+                      </div>
+                      <div className="calc-param">
+                        <span className="calc-param__k">Discovered At:</span>
+                        <span className="calc-param__v">Cycle {bestSoFar.foundAtCycle ?? 1}</span>
+                      </div>
+                    </div>
+
+                    <div className="calc-decision-box calc-decision-box--accepted" style={{ marginTop: 'var(--space-2)' }}>
+                      <span className="calc-decision-badge">Final Optimization Answer</span>
+                      <p style={{ marginTop: '4px', fontSize: '12px' }}>
+                        Optimal objective: <strong>f(x*) = {bestSoFar.f.toFixed(6)}</strong>
+                        <br />
+                        Optimal fitness: <strong>fit(x*) = {bestSoFar.fit.toFixed(6)}</strong>
+                        <br />
+                        Optimal vector: <strong>x* = ({bestSoFar.x.map((c) => c.toFixed(6)).join(', ')})</strong>
+                      </p>
+                    </div>
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">1. Objective Function Verification:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Objective Formula:</span>
+                          <code className="calc-equation-code">{problem.objective}</code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Substituted Coordinate Evaluation:</span>
+                          <code className="calc-equation-code">
+                            {formatObjectiveCalc(problem.id, bestSoFar.x, bestSoFar.f)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">2. Fitness Transformation:</span>
+                      <div className="calc-equation-group">
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">General Fitness Formula:</span>
+                          <code className="calc-equation-code">
+                            fit(x) = 1 / (1 + f(x)) &nbsp; [for f(x) ≥ 0] &nbsp;|&nbsp; fit(x) = 1 + |f(x)| &nbsp; [for f(x) &lt; 0]
+                          </code>
+                        </div>
+                        <div className="calc-equation-row">
+                          <span className="calc-equation-tag">Substituted Fitness Value:</span>
+                          <code className="calc-equation-code">
+                            {formatFitnessCalc(bestSoFar.f, bestSoFar.fit)}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="calc-step-box">
+                      <span className="calc-step-label">3. Final Colony Population State:</span>
+                      <div style={{ marginTop: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {population.map((src) => (
+                          <div key={src.id} style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: 'var(--color-text-secondary)' }}>
+                            • Source #{src.id}: x = ({src.x.map((c) => c.toFixed(4)).join(', ')}), f = {src.f.toFixed(6)}, trial = {src.t} {bestSoFar.id === src.id ? ' [Global Best]' : ''}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </section>
 
@@ -435,10 +1008,10 @@ export function SimulatorView() {
                           >
                             <td>
                               <strong>#{src.id}</strong>
-                              {isBest && <span className="sim-badge-best">★ BEST</span>}
+                              {isBest && <span className="sim-badge-best">BEST</span>}
                               {isScoutRisk && (
                                 <span className="sim-badge-scout-risk" title="trial > limit: scout candidate!">
-                                  ⚠ LIMIT
+                                  LIMIT
                                 </span>
                               )}
                             </td>

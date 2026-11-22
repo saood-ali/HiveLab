@@ -7,7 +7,7 @@ function FieldError({ error }) {
   if (!error) return null;
   return (
     <div className="setup__error" role="alert">
-      <span aria-hidden="true">⚠</span> {error}
+      {error}
     </div>
   );
 }

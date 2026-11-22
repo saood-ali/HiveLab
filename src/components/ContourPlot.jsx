@@ -1,4 +1,6 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import gsap from 'gsap';
+import { computeLandscapeLabels } from './labelLayout.js';
 import './ContourPlot.css';
 
 /**
@@ -9,6 +11,7 @@ import './ContourPlot.css';
  * - SVG overlay renders food sources, active candidate, best-so-far, and movement arrows.
  * - Accepted, rejected, and scout moves are visibly distinguishable using both line styles and shapes.
  * - Play/Pause animation ONLY pulses the movement line of the current step; NEVER advances algorithm state.
+ * - Subtle GSAP micro-animations provide fluid UI feedback without heavy 3D overhead.
  */
 export function ContourPlot({ problem, bounds, population, currentEvent, bestSoFar }) {
   const canvasRef = useRef(null);
@@ -28,8 +31,14 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
   const PLOT_W = SIZE - 2 * PAD;
   const PLOT_H = SIZE - 2 * PAD;
 
-  const toSvgX = (x) => PAD + ((x - xMin) / (xMax - xMin)) * PLOT_W;
-  const toSvgY = (y) => SIZE - PAD - ((y - yMin) / (yMax - yMin)) * PLOT_H; // invert Y for screen coords
+  const toSvgX = useCallback(
+    (x) => PAD + ((x - xMin) / (xMax - xMin)) * PLOT_W,
+    [xMin, xMax, PAD, PLOT_W]
+  );
+  const toSvgY = useCallback(
+    (y) => SIZE - PAD - ((y - yMin) / (yMax - yMin)) * PLOT_H, // invert Y for screen coords
+    [yMin, yMax, PAD, SIZE, PLOT_H]
+  );
 
   // Draw contour background on canvas once when problem/bounds change
   useEffect(() => {
@@ -129,6 +138,20 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
     return null;
   }, [currentEvent]);
 
+  // Dynamic collision-free label layout for food sources, candidate, and best-so-far
+  const labelLayout = useMemo(() => {
+    return computeLandscapeLabels({
+      population,
+      moveInfo,
+      bestSoFar,
+      activeSourceId: currentEvent?.sourceId || currentEvent?.affectedSourceId,
+      toSvgX,
+      toSvgY,
+      pad: PAD,
+      size: SIZE,
+    });
+  }, [population, moveInfo, bestSoFar, currentEvent, toSvgX, toSvgY, PAD, SIZE]);
+
   // Tick marks for axes
   const xTicks = [xMin, (xMin + xMax) / 2, xMax];
   const yTicks = [yMin, (yMin + yMax) / 2, yMax];
@@ -137,7 +160,7 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
     <div className="plot-container" role="region" aria-label="2D Objective Landscape Plot">
       <div className="plot-header">
         <h3 className="plot-title">
-          <span>🎯</span> Objective Landscape &amp; Bee Positions
+          Objective Landscape &amp; Bee Positions
         </h3>
 
         <div className="plot-anim-controls">
@@ -147,7 +170,7 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
             onClick={() => setAnimating((v) => !v)}
             title="Toggle animated pulse on the active movement vector"
           >
-            {animating ? '⏸ Pause Motion' : '▶ Play Motion'}
+            {animating ? 'Pause Motion' : 'Play Motion'}
           </button>
         </div>
       </div>
@@ -169,36 +192,36 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
           aria-label="Food sources and bee movements plot"
         >
           <defs>
-            {/* Arrowhead markers */}
+            {/* Sleek smaller arrowhead markers */}
             <marker
               id="arrow-accepted"
-              markerWidth="8"
-              markerHeight="8"
-              refX="6"
-              refY="4"
+              markerWidth="5"
+              markerHeight="5"
+              refX="4"
+              refY="2.5"
               orient="auto"
             >
-              <polygon points="0 1, 8 4, 0 7" fill="#15803d" />
+              <polygon points="0 0.8, 5 2.5, 0 4.2" fill="#15803d" />
             </marker>
             <marker
               id="arrow-rejected"
-              markerWidth="8"
-              markerHeight="8"
-              refX="6"
-              refY="4"
+              markerWidth="5"
+              markerHeight="5"
+              refX="4"
+              refY="2.5"
               orient="auto"
             >
-              <polygon points="0 1, 8 4, 0 7" fill="#b91c1c" />
+              <polygon points="0 0.8, 5 2.5, 0 4.2" fill="#b91c1c" />
             </marker>
             <marker
               id="arrow-scout"
-              markerWidth="8"
-              markerHeight="8"
-              refX="6"
-              refY="4"
+              markerWidth="5"
+              markerHeight="5"
+              refX="4"
+              refY="2.5"
               orient="auto"
             >
-              <polygon points="0 1, 8 4, 0 7" fill="#2563eb" />
+              <polygon points="0 0.8, 5 2.5, 0 4.2" fill="#2563eb" />
             </marker>
           </defs>
 
@@ -304,8 +327,8 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
                     ? '#b91c1c'
                     : '#2563eb'
                 }
-                strokeWidth={moveInfo.type === 'accepted' ? 2.5 : 2}
-                strokeDasharray={moveInfo.type === 'accepted' ? 'none' : '4 4'}
+                strokeWidth={1.5}
+                strokeDasharray={moveInfo.type === 'accepted' ? 'none' : '3 3'}
                 strokeDashoffset={animating ? -animOffset : 0}
                 markerEnd={`url(#arrow-${moveInfo.type})`}
               />
@@ -315,20 +338,25 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
                 transform={`translate(${toSvgX(moveInfo.to[0])}, ${toSvgY(moveInfo.to[1])})`}
               >
                 <circle
-                  r="7"
-                  fill="none"
-                  stroke={moveInfo.type === 'accepted' ? '#15803d' : '#b91c1c'}
-                  strokeWidth="2"
-                  strokeDasharray="2 2"
+                  r="3.5"
+                  fill={moveInfo.type === 'accepted' ? '#15803d' : '#b91c1c'}
+                  stroke="#ffffff"
+                  strokeWidth="1"
                 />
                 <text
-                  x="0"
-                  y="-10"
-                  fontSize="10"
+                  x={labelLayout.candidateLabel ? labelLayout.candidateLabel.dx : 0}
+                  y={labelLayout.candidateLabel ? labelLayout.candidateLabel.dy : -7}
+                  fontSize="9.5"
                   fontWeight="bold"
-                  textAnchor="middle"
+                  textAnchor={labelLayout.candidateLabel ? labelLayout.candidateLabel.anchor : 'middle'}
                   fill={moveInfo.type === 'accepted' ? '#15803d' : '#b91c1c'}
                   fontFamily="'JetBrains Mono', monospace"
+                  style={{
+                    paintOrder: 'stroke fill',
+                    stroke: '#ffffff',
+                    strokeWidth: '3.5px',
+                    strokeLinejoin: 'round',
+                  }}
                 >
                   x' {moveInfo.type === 'accepted' ? '✓' : '✗'}
                 </text>
@@ -343,7 +371,11 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
             const isActive =
               currentEvent?.sourceId === src.id ||
               currentEvent?.affectedSourceId === src.id;
-            const isBest = bestSoFar?.id === src.id;
+            const lbl = labelLayout.sourceLabels[src.id] || {
+              dx: 0,
+              dy: isActive ? -10 : -8,
+              anchor: 'middle',
+            };
 
             return (
               <g
@@ -353,45 +385,29 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
                 onMouseEnter={() => setHoveredSource(src)}
                 onMouseLeave={() => setHoveredSource(null)}
               >
-                {/* Active bee glow ring */}
-                {isActive && (
-                  <circle
-                    r="14"
-                    fill="none"
-                    stroke="var(--color-accent)"
-                    strokeWidth="3"
-                    opacity="0.8"
-                  />
-                )}
-
-                {/* Best solution outer ring */}
-                {isBest && (
-                  <circle
-                    r="11"
-                    fill="none"
-                    stroke="#111111"
-                    strokeWidth="1.5"
-                    strokeDasharray="2 2"
-                  />
-                )}
-
-                {/* Source Node Circle */}
+                {/* Clean Source Node */}
                 <circle
-                  r={isActive ? 8 : 6}
+                  r={isActive ? 6.5 : 5}
                   fill={isActive ? 'var(--color-accent)' : '#111111'}
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
+                  stroke={isActive ? '#111111' : '#ffffff'}
+                  strokeWidth={isActive ? '2' : '1.5'}
                 />
 
-                {/* Source ID Text */}
+                {/* Source ID Text with collision avoidance & stroke halo */}
                 <text
-                  x="0"
-                  y={isActive ? -12 : -9}
-                  fontSize="10"
-                  fontWeight="bold"
-                  textAnchor="middle"
+                  x={lbl.dx}
+                  y={lbl.dy}
+                  fontSize={isActive ? '10' : '9.5'}
+                  fontWeight={isActive ? 'bold' : '600'}
+                  textAnchor={lbl.anchor}
                   fill="#111111"
                   fontFamily="'JetBrains Mono', monospace"
+                  style={{
+                    paintOrder: 'stroke fill',
+                    stroke: '#ffffff',
+                    strokeWidth: '3.5px',
+                    strokeLinejoin: 'round',
+                  }}
                 >
                   #{src.id}
                 </text>
@@ -406,14 +422,21 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
               pointerEvents="none"
             >
               <text
-                x="10"
-                y="4"
+                x={labelLayout.bestLabel ? labelLayout.bestLabel.dx : 10}
+                y={labelLayout.bestLabel ? labelLayout.bestLabel.dy : 4}
                 fontSize="11"
                 fontWeight="bold"
-                fill="#855b00"
+                textAnchor={labelLayout.bestLabel ? labelLayout.bestLabel.anchor : 'start'}
+                fill="#b45309"
                 fontFamily="'JetBrains Mono', monospace"
+                style={{
+                  paintOrder: 'stroke fill',
+                  stroke: '#ffffff',
+                  strokeWidth: '3px',
+                  strokeLinejoin: 'round',
+                }}
               >
-                ★ x*
+                x*
               </text>
             </g>
           )}
@@ -445,16 +468,33 @@ export function ContourPlot({ problem, bounds, population, currentEvent, bestSoF
       {/* Visual Legend */}
       <div className="plot-legend" aria-label="Plot Legend">
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: '#111111' }}>●</span>
+          <span
+            style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '9999px',
+              backgroundColor: '#111111',
+            }}
+          />
           Food Source
         </span>
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: 'var(--color-accent)' }}>🟡</span>
+          <span
+            style={{
+              display: 'inline-block',
+              width: '9px',
+              height: '9px',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--color-accent)',
+              border: '1.5px solid #111111',
+            }}
+          />
           Active Bee
         </span>
         <span className="plot-legend__item">
-          <span className="plot-legend__icon" style={{ color: '#855b00' }}>★</span>
-          Best-so-far (x*)
+          <span className="plot-legend__icon" style={{ color: '#b45309', fontWeight: 'bold' }}>x*</span>
+          Best-so-far
         </span>
         <span className="plot-legend__item">
           <span className="plot-legend__icon" style={{ color: '#15803d' }}>──→</span>
