@@ -105,9 +105,15 @@
 /* Fact grid */
 .intro__facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-3);
   margin-bottom: var(--space-6);
+}
+
+@media (max-width: 600px) {
+  .intro__facts {
+    grid-template-columns: 1fr;
+  }
 }
 
 .intro__fact {

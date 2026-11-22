@@ -175,7 +175,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 
 .calc-param-grid {
@@ -195,14 +195,15 @@
 }
 
 .calc-param__k {
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   color: var(--color-text-muted);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
 }
 
 .calc-param__v {
-  font-size: 11px;
+  font-size: 12px;
   font-family: 'JetBrains Mono', monospace;
   color: var(--color-text-primary);
   font-weight: 600;
@@ -212,14 +213,14 @@
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-3);
-  line-height: 1.5;
+  padding: var(--space-3) var(--space-4);
+  line-height: 1.6;
 }
 
 .calc-step-box code {
   display: block;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -227,6 +228,7 @@
   margin-top: var(--space-2);
   color: var(--color-text-primary);
   overflow-x: auto;
+  line-height: 1.55;
 }
 
 .calc-equation-group {
@@ -239,11 +241,11 @@
 .calc-equation-row {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .calc-equation-tag {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -253,14 +255,14 @@
 .calc-equation-code {
   display: block;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 12px;
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  padding: 8px 12px;
   color: var(--color-text-primary);
   overflow-x: auto;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
 .calc-step-box--warning {
@@ -270,13 +272,14 @@
 .calc-step-label {
   display: block;
   font-weight: var(--font-weight-semibold);
+  font-size: 13px;
   color: var(--color-text-primary);
   margin-bottom: 2px;
 }
 
 .calc-decision-box {
   border-radius: var(--radius-sm);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid transparent;
 }
 
@@ -296,7 +299,7 @@
   display: inline-block;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   margin-bottom: 4px;
 }
@@ -313,7 +316,7 @@
 .sim-card__summary {
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  line-height: var(--line-height-normal);
+  line-height: var(--line-height-relaxed);
   margin-bottom: var(--space-4);
 }
 

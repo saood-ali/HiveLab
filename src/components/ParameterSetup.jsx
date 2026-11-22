@@ -83,16 +83,23 @@ export function ParameterSetup() {
 
       {/* Colony parameters */}
       <section className="setup__section" aria-labelledby="colony-section-title">
-        <h2 className="setup__section-title" id="colony-section-title">Colony &amp; cycle settings</h2>
+        <h2 className="setup__section-title" id="colony-section-title">Colony &amp; Cycle Parameters</h2>
 
         <div className="setup__fields">
           {/* S */}
           <div className="setup__field">
-            <label className="setup__field-label" htmlFor="param-S">
-              Colony size <strong>S</strong>
-            </label>
+            <div className="setup__field-header">
+              <label className="setup__field-label" htmlFor="param-S">
+                Colony Size <strong>(S)</strong>
+              </label>
+              {!validation.errors.S && (
+                <span className="setup__field-badge" id="param-S-derived">
+                  Np = {Np} food sources
+                </span>
+              )}
+            </div>
             <span className="setup__field-hint">
-              Must be an even positive integer. Half the colony are employed bees; the other half are onlooker bees.
+              Even integer (colony is split 50/50: {Np} employed + {Np} onlookers)
             </span>
             <input
               id="param-S"
@@ -106,43 +113,17 @@ export function ParameterSetup() {
               aria-invalid={!!validation.errors.S}
             />
             <FieldError error={validation.errors.S} />
-            {!validation.errors.S && (
-              <span className="setup__field-derived" id="param-S-derived">
-                → Np = S/2 = {Math.floor(Number(raw.S) / 2)} food sources
-              </span>
-            )}
-          </div>
-
-          {/* Np (derived, read-only) */}
-          <div className="setup__field">
-            <label className="setup__field-label" htmlFor="param-Np">
-              Food sources <strong>Np</strong> (derived)
-            </label>
-            <span className="setup__field-hint">
-              Always Np = S/2. This is set automatically — you cannot edit it directly.
-            </span>
-            <input
-              id="param-Np"
-              type="number"
-              className="setup__input"
-              value={!validation.errors.S ? Math.floor(Number(raw.S) / 2) : '—'}
-              readOnly
-              aria-readonly="true"
-              tabIndex={-1}
-              style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-muted)', cursor: 'default' }}
-            />
-            <span className="setup__field-hint" style={{ marginTop: '2px' }}>
-              Standard ABC formula: Np = S/2
-            </span>
           </div>
 
           {/* T */}
           <div className="setup__field">
-            <label className="setup__field-label" htmlFor="param-T">
-              Maximum cycles <strong>T</strong>
-            </label>
+            <div className="setup__field-header">
+              <label className="setup__field-label" htmlFor="param-T">
+                Maximum Cycles <strong>(T)</strong>
+              </label>
+            </div>
             <span className="setup__field-hint">
-              The algorithm runs for at most T complete cycles (employed → onlooker → scout → memorise).
+              Total optimization cycles to run
             </span>
             <input
               id="param-T"
@@ -160,11 +141,13 @@ export function ParameterSetup() {
 
           {/* limit */}
           <div className="setup__field">
-            <label className="setup__field-label" htmlFor="param-limit">
-              Abandonment limit
-            </label>
+            <div className="setup__field-header">
+              <label className="setup__field-label" htmlFor="param-limit">
+                Abandonment Limit
+              </label>
+            </div>
             <span className="setup__field-hint">
-              A food source is abandoned and replaced by a scout when its trial counter exceeds this value (rule: trial &gt; limit).
+              Scout bee trigger threshold (abandon when trial &gt; limit)
             </span>
             <input
               id="param-limit"
@@ -181,11 +164,13 @@ export function ParameterSetup() {
 
           {/* seed */}
           <div className="setup__field">
-            <label className="setup__field-label" htmlFor="param-seed">
-              Random seed
-            </label>
+            <div className="setup__field-header">
+              <label className="setup__field-label" htmlFor="param-seed">
+                Random Seed
+              </label>
+            </div>
             <span className="setup__field-hint">
-              Controls all random draws. The same seed always produces the same run. Change to explore a different random sequence.
+              PRNG seed for reproducible stochastic runs
             </span>
             <input
               id="param-seed"
@@ -203,13 +188,15 @@ export function ParameterSetup() {
 
       {/* Bounds */}
       <section className="setup__section" aria-labelledby="bounds-section-title">
-        <h2 className="setup__section-title" id="bounds-section-title">Variable bounds</h2>
+        <h2 className="setup__section-title" id="bounds-section-title">Search Space Bounds</h2>
         <div className="setup__fields setup__fields--single">
           {problem.varNames.map((name, idx) => (
             <div className="setup__field" key={idx}>
-              <label className="setup__field-label">
-                {name} bounds
-              </label>
+              <div className="setup__field-header">
+                <label className="setup__field-label">
+                  Coordinate {name} interval
+                </label>
+              </div>
               <div className="setup__bounds-row">
                 <input
                   type="number"
@@ -235,65 +222,20 @@ export function ParameterSetup() {
         </div>
       </section>
 
-      {/* Summary of derived values */}
-      {validation.valid && (
-        <div className="setup__section">
-          <h2 className="setup__section-title">Configuration summary</h2>
-          <div className="setup__derived-panel">
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Colony size S</span>
-              <span className="setup__derived-value">{raw.S}</span>
-            </div>
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Food sources Np = S/2</span>
-              <span className="setup__derived-value">{Np}</span>
-            </div>
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Employed bees</span>
-              <span className="setup__derived-value">{Np}</span>
-            </div>
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Onlooker bees</span>
-              <span className="setup__derived-value">{Np}</span>
-            </div>
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Max cycles T</span>
-              <span className="setup__derived-value">{raw.T}</span>
-            </div>
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Abandon limit</span>
-              <span className="setup__derived-value">{raw.limit}</span>
-            </div>
-            <div className="setup__derived-item">
-              <span className="setup__derived-label">Random seed</span>
-              <span className="setup__derived-value">{raw.seed}</span>
-            </div>
-            {problem.varNames.map((name, idx) => (
-              <div className="setup__derived-item" key={idx}>
-                <span className="setup__derived-label">{name} range</span>
-                <span className="setup__derived-value">
-                  [{raw.bounds[idx]?.[0]}, {raw.bounds[idx]?.[1]}]
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Action bar */}
       <div className="setup__actions">
-        <button className="btn btn--ghost" onClick={handleBack}>
+        <button className="btn btn--secondary" onClick={handleBack}>
           ← Back
         </button>
-        <button className="btn btn--secondary" onClick={handleReset}>
-          Reset defaults
+        <button className="btn btn--outline" onClick={handleReset}>
+          Reset Defaults
         </button>
         <button
           className="btn btn--primary"
           onClick={handleStart}
           disabled={!validation.valid}
           aria-disabled={!validation.valid}
-          title={!validation.valid ? 'Fix the errors above first' : 'Start the ABC simulation'}
+          title={!validation.valid ? 'Fix the highlighted errors first' : 'Start the ABC simulation'}
         >
           Start Simulation →
         </button>

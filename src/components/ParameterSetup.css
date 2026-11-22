@@ -59,6 +59,13 @@
   gap: var(--space-1);
 }
 
+.setup__field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .setup__field-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -68,10 +75,22 @@
   gap: var(--space-2);
 }
 
+.setup__field-badge {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
 .setup__field-hint {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   line-height: var(--line-height-normal);
+  margin-bottom: 2px;
 }
 
 .setup__field-derived {

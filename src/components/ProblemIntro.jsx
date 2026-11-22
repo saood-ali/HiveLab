@@ -64,67 +64,45 @@ export function ProblemIntro() {
           <div className="intro__objective">{problem.objective}</div>
         </div>
 
-        {/* Key facts */}
+        {/* Key specifications summary */}
         <div className="intro__facts">
           <div className="intro__fact">
-            <div className="intro__fact-label">Goal</div>
-            <div className="intro__fact-value" style={{ textTransform: 'capitalize' }}>
-              {problem.goal}
+            <div className="intro__fact-label">Search Domain</div>
+            <div className="intro__fact-value">
+              {problem.varNames.map((v, i) => `${v} ∈ [${problem.bounds.lower[i]}, ${problem.bounds.upper[i]}]`).join(', ')}
             </div>
           </div>
           <div className="intro__fact">
-            <div className="intro__fact-label">Dimensions</div>
-            <div className="intro__fact-value">{problem.dimensions} variables</div>
+            <div className="intro__fact-label">Global Optimum</div>
+            <div className="intro__fact-value">
+              {problem.id === 'rosenbrock-practice' ? '(1.00, 1.00) · f = 0' : '(0.00, 0.00) · f = 0'}
+            </div>
           </div>
           <div className="intro__fact">
-            <div className="intro__fact-label">Variable names</div>
-            <div className="intro__fact-value">{problem.varNames.join(', ')}</div>
-          </div>
-          {problem.bounds.lower.map((lo, i) => (
-            <div className="intro__fact" key={i}>
-              <div className="intro__fact-label">Bounds for {problem.varNames[i]}</div>
-              <div className="intro__fact-value">
-                [{lo}, {problem.bounds.upper[i]}]
-              </div>
+            <div className="intro__fact-label">Default Colony</div>
+            <div className="intro__fact-value">
+              S = {problem.defaultParams?.S ?? 10} &nbsp;·&nbsp; Np = {(problem.defaultParams?.S ?? 10) / 2} sources
             </div>
-          ))}
-          {problem.defaultParams && (
-            <>
-              <div className="intro__fact">
-                <div className="intro__fact-label">Default colony S</div>
-                <div className="intro__fact-value">{problem.defaultParams.S}</div>
-              </div>
-              <div className="intro__fact">
-                <div className="intro__fact-label">Food sources Np = S/2</div>
-                <div className="intro__fact-value">
-                  {problem.defaultParams.S / 2}
-                </div>
-              </div>
-              <div className="intro__fact">
-                <div className="intro__fact-label">Default max cycles T</div>
-                <div className="intro__fact-value">{problem.defaultParams.T}</div>
-              </div>
-              <div className="intro__fact">
-                <div className="intro__fact-label">Default limit</div>
-                <div className="intro__fact-value">{problem.defaultParams.limit}</div>
-              </div>
-            </>
-          )}
+          </div>
+          <div className="intro__fact">
+            <div className="intro__fact-label">Default Cycles &amp; Limit</div>
+            <div className="intro__fact-value">
+              T = {problem.defaultParams?.T ?? 10} &nbsp;·&nbsp; Limit = {problem.defaultParams?.limit ?? 1}
+            </div>
+          </div>
         </div>
 
         {/* What ABC will do */}
         <div className="intro__abc-blurb">
           <div className="intro__abc-blurb-title">
-            <span>🐝</span> What the ABC algorithm will do
+            <span>🐝</span> ABC Optimization Workflow
           </div>
           <ol className="intro__abc-steps">
             {[
-              ['Initialise', `Scatter ${problem.defaultParams ? (problem.defaultParams.S / 2) : 'Np'} random food sources (candidate solutions) inside the bounds.`],
-              ['Employed bees', 'Each bee tries a small neighbourhood move from its source. Better candidates replace the old source; worse ones are rejected and the trial counter goes up.'],
-              ['Onlooker bees', 'Bees in the hive choose sources to investigate — better sources attract more attention. Same greedy move attempted.'],
-              ['Scout bees', `Any source whose trial counter exceeds the limit (${problem.defaultParams?.limit ?? 'limit'}) is abandoned and replaced with a fresh random source.`],
-              ['Memorise best', 'The best solution found so far is saved outside the population so it can never be lost.'],
-              ['Repeat', `Cycles repeat until cycle = T (${problem.defaultParams?.T ?? 'T'}). Then the best solution is reported.`],
+              ['Employed Bees', 'Each bee perturbs its food source via a random partner vector and accepts if fitness strictly improves.'],
+              ['Onlooker Bees', 'Bees at the hive evaluate food sources with selection probability proportional to fitness.'],
+              ['Scout Bees', 'Exhausted food sources exceeding the trial limit are abandoned and replaced with fresh random positions.'],
+              ['Memorise Best', 'The best solution discovered is stored outside the colony to guarantee it is permanently retained.'],
             ].map(([title, text], idx) => (
               <li key={idx}>
                 <span className="intro__step-num" aria-hidden="true">{idx + 1}</span>
