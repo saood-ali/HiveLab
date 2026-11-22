@@ -44,10 +44,15 @@ export function Header() {
           className={`header__nav-btn${view === 'simulator' ? ' header__nav-btn--active' : ''}`}
           onClick={() => dispatch({ type: 'SET_VIEW', view: 'simulator' })}
           aria-current={view === 'simulator' ? 'page' : undefined}
-          aria-disabled={view !== 'simulator'}
-          title={view !== 'simulator' ? 'Configure parameters first' : undefined}
         >
           Simulator
+        </button>
+        <button
+          className={`header__nav-btn${view === 'replay' ? ' header__nav-btn--active' : ''}`}
+          onClick={() => dispatch({ type: 'SET_VIEW', view: 'replay' })}
+          aria-current={view === 'replay' ? 'page' : undefined}
+        >
+          Worked Example
         </button>
       </nav>
     </header>

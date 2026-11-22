@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/tests/engine.test.js"
+    "test": "node src/tests/engine.test.js && node src/tests/lectureReplay.test.js",
+    "test:engine": "node src/tests/engine.test.js",
+    "test:lecture": "node src/tests/lectureReplay.test.js"
   },
   "dependencies": {
     "react": "^18.3.1",

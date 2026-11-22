@@ -3,7 +3,7 @@ import { PROBLEMS } from '../data/problems.js';
 import { useAppState, useAppDispatch } from '../app/AppState.jsx';
 
 function TagBadge({ tag }) {
-  const cls = tag === 'Lecture' ? 'intro__tag--lecture' : 'intro__tag--practice';
+  const cls = tag === 'Benchmark' ? 'intro__tag--benchmark' : 'intro__tag--practice';
   return <span className={`intro__tag ${cls}`}>{tag}</span>;
 }
 
@@ -50,9 +50,9 @@ export function ProblemIntro() {
         <div className="intro__eyebrow">
           <TagBadge tag={problem.tag} />
           <span className="intro__eyebrow-text">
-            {problem.tag === 'Lecture'
-              ? 'From the lecture worked example'
-              : 'Extra practice problem — not from the lecture'}
+            {problem.tag === 'Benchmark'
+              ? 'Standard benchmark optimization problem'
+              : 'Interactive practice problem'}
           </span>
         </div>
 

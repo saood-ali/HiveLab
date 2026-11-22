@@ -1,13 +1,12 @@
 /**
  * Core mathematical functions for Artificial Bee Colony (ABC) algorithm.
- * Strictly implements the specification from ALGORITHM_SPEC.md and the
- * Evolutionary Computing lecture PDF (printed pages 35-46).
+ * Strictly implements the standard ABC optimization specification.
  *
  * All functions are pure, deterministic, and free of React / UI side effects.
  */
 
 /**
- * Fitness conversion function used throughout the ABC lecture:
+ * Fitness conversion function for minimization:
  *   fit_m = 1 / (1 + f_m)  if f_m >= 0
  *   fit_m = 1 + |f_m|      if f_m < 0
  *
@@ -25,7 +24,7 @@ export function calculateFitness(f) {
 }
 
 /**
- * Onlooker selection probability formula from lecture (printed page 40/44):
+ * Onlooker selection probability formula:
  *   p_m = 0.9 * (fit_m / max(fit)) + 0.1
  *
  * The +0.1 floor guarantees every source retains a non-zero selection chance.
@@ -41,6 +40,18 @@ export function calculateProbabilities(fitnesses) {
     return fitnesses.map(() => 0.1);
   }
   return fitnesses.map((fit) => 0.9 * (fit / maxFit) + 0.1);
+}
+
+/**
+ * Pure clipping function: clamp a value to [lower, upper].
+ *
+ * @param {number} val
+ * @param {number} lower
+ * @param {number} upper
+ * @returns {number}
+ */
+export function clipToBounds(val, lower, upper) {
+  return Math.min(upper, Math.max(lower, val));
 }
 
 /**
@@ -119,7 +130,7 @@ export function generateUniformSource(bounds, rng) {
 
 /**
  * Check if a source's trial counter exceeds the abandonment limit.
- * Per the lecture specification: strictly t_m > limit, not >=.
+ * Per the ABC specification: strictly t_m > limit, not >=.
  *
  * @param {number} trial - Current trial counter t_m
  * @param {number} limit - Abandonment limit threshold

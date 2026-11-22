@@ -94,6 +94,7 @@
 .header__nav-btn--active {
   color: var(--color-text-primary);
   background: var(--color-bg-secondary);
+  font-weight: var(--font-weight-semibold);
 }
 
 @media (max-width: 600px) {

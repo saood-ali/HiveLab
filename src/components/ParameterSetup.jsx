@@ -132,7 +132,7 @@ export function ParameterSetup() {
               style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-muted)', cursor: 'default' }}
             />
             <span className="setup__field-hint" style={{ marginTop: '2px' }}>
-              Lecture formula: Np = S/2
+              Standard ABC formula: Np = S/2
             </span>
           </div>
 

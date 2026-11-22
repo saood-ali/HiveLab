@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import './SimulatorView.css';
-import { useAppState } from '../app/AppState.jsx';
+import { useAppState, useAppDispatch } from '../app/AppState.jsx';
 import { ABCEngine } from '../engine/abcEngine.js';
 import { ContourPlot } from './ContourPlot.jsx';
 import { FitnessProbabilityView } from './FitnessProbabilityView.jsx';
@@ -8,6 +8,7 @@ import { ConvergenceChart } from './ConvergenceChart.jsx';
 
 export function SimulatorView() {
   const { problem, params } = useAppState();
+  const dispatch = useAppDispatch();
 
   // Create deterministic engine instance for current problem & parameters
   const engine = useMemo(() => {
@@ -170,6 +171,11 @@ export function SimulatorView() {
 
   return (
     <div className="simulator" role="region" aria-label="ABC Algorithm Simulation Workspace">
+      {/* Accessible screen reader announcement on step changes */}
+      <div className="sr-only" aria-live="polite">
+        {`Cycle ${cycle}, Step ${stepIndex}, ${phaseLabel}: ${currentEvent.description || ''}`}
+      </div>
+
       {/* ── Top Control Bar ────────────────────────────────────────── */}
       <section className="sim-controls" aria-label="Simulation Controls">
         <div className="sim-controls__left">
@@ -179,6 +185,14 @@ export function SimulatorView() {
           <span className="sim-controls__cycle-info">
             Cycle <strong>{cycle}</strong> of {params.T} &nbsp;·&nbsp; Step #{stepIndex}
           </span>
+          <button
+            className="btn btn--outline"
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'replay' })}
+            title="View complete step-by-step worked example with mathematical breakdown"
+            style={{ fontSize: '11px', padding: '3px 8px', marginLeft: 'var(--space-2)' }}
+          >
+            📖 Worked Example
+          </button>
         </div>
 
         <div className="sim-controls__actions">
