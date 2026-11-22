@@ -1,4 +1,4 @@
-# Contri
+
 # HiveLab
 
 An interactive web visualizer for the Artificial Bee Colony (ABC) optimization algorithm.
