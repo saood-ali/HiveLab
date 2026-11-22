@@ -7,6 +7,11 @@ HiveLab is a browser-based educational tool that lets you step through the ABC a
 Everything runs locally in your browser with pure client-side code and no background automation. The algorithm only advances when you click Next Step or press the right arrow key.
 
 ---
+##  Demo Video 
+
+
+https://github.com/user-attachments/assets/5fdaaed6-0036-4108-b492-1d45f1645689
+
 
 ## How It Works
 
