@@ -1,0 +1,106 @@
+/* ================================================================
+   Header component styles
+   ================================================================ */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Measured: desktop header height = 72px; using backdrop-blur like the reference */
+  height: var(--header-height);
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+}
+
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.header__logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+}
+
+.header__name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.header__sub {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-normal);
+}
+
+.header__divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.header__spacer {
+  flex: 1;
+}
+
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.header__nav-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.header__nav-btn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.header__nav-btn--active {
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 0 var(--space-4);
+  }
+  .header__sub {
+    display: none;
+  }
+}
